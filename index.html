@@ -1324,7 +1324,99 @@
             }
         }
 
-        // 显示交易查询界面
+        // 显示交易查询界面<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Meme Token Launcher - LetsBonk + Phantom</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import {
+      PhantomWalletAdapter
+    } from "https://unpkg.com/@solana/wallet-adapter-wallets@0.20.0/lib/index.browser.mjs";
+
+    window.initWallet = async function () {
+      const phantom = new PhantomWalletAdapter();
+      await phantom.connect();
+      window.wallet = phantom;
+      const addr = phantom.publicKey.toBase58();
+      document.getElementById("walletAddress").innerText = "🟢 Connected: " + addr;
+    };
+  </script>
+</head>
+<body class="bg-gradient-to-r from-purple-100 via-yellow-100 to-blue-100 min-h-screen flex items-center justify-center">
+  <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-4 text-center">🚀 Launch Meme Token</h1>
+
+    <!-- Wallet -->
+    <div class="mb-6 text-center">
+      <button onclick="initWallet()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+        Connect Phantom
+      </button>
+      <div id="walletAddress" class="mt-2 text-sm text-gray-600"></div>
+    </div>
+
+    <!-- Form -->
+    <div class="space-y-4">
+      <input type="text" id="name" placeholder="Token Name" class="w-full px-4 py-2 rounded border border-gray-300">
+      <input type="text" id="symbol" placeholder="Symbol (e.g. BMEME)" class="w-full px-4 py-2 rounded border border-gray-300">
+      <input type="number" id="decimals" placeholder="Decimals (e.g. 6)" class="w-full px-4 py-2 rounded border border-gray-300" value="6">
+      <input type="text" id="supply" placeholder="Total Supply (e.g. 1000000000000000)" class="w-full px-4 py-2 rounded border border-gray-300">
+      <input type="text" id="buyAmount" placeholder="Initial Buy Amount" class="w-full px-4 py-2 rounded border border-gray-300">
+    </div>
+
+    <button onclick="createToken()" class="mt-6 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 font-semibold">
+      Mint Token
+    </button>
+
+    <div id="result" class="mt-4 text-sm text-center"></div>
+  </div>
+
+  <script>
+    async function createToken() {
+      const name = document.getElementById("name").value;
+      const symbol = document.getElementById("symbol").value;
+      const decimals = parseInt(document.getElementById("decimals").value);
+      const supply = document.getElementById("supply").value;
+      const buyAmount = document.getElementById("buyAmount").value;
+
+      const resultEl = document.getElementById("result");
+      resultEl.innerText = "⏳ Minting in progress...";
+
+      const payload = {
+        name,
+        symbol,
+        decimals,
+        supply,
+        buyAmount,
+        createOnly: false,
+        migrateType: "amm"
+      };
+
+      try {
+        const res = await fetch("https://launch.letsbonk.fun/launchpad/createMint", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          resultEl.innerHTML = `✅ Token created!<br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+        } else {
+          resultEl.innerHTML = `❌ Error:<br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      } catch (err) {
+        resultEl.innerHTML = `❌ Exception:<br><pre>${err.message}</pre>`;
+      }
+    }
+  </script>
+</body>
+</html>
+
         function showTransactionChecker(signature = '') {
             const checkerDiv = document.getElementById('transactionChecker');
             const signatureInput = document.getElementById('transactionSignature');
