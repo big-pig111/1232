@@ -504,21 +504,77 @@
                         
                         // 解码base64交易数据
                         const transactionBytes = Uint8Array.from(atob(apiResult.transaction), c => c.charCodeAt(0));
-                        const transaction = solanaWeb3.Transaction.from(transactionBytes);
                         
-                        console.log('交易解码成功:', transaction);
+                        // 尝试使用VersionedTransaction处理
+                        let transaction;
+                        let isVersioned = false;
                         
-                        // 设置费用支付者
-                        transaction.feePayer = walletPublicKey;
+                        try {
+                            // 首先尝试版本化交易
+                            transaction = solanaWeb3.VersionedTransaction.deserialize(transactionBytes);
+                            isVersioned = true;
+                            console.log('检测到版本化交易，解码成功:', transaction);
+                        } catch (versionedError) {
+                            console.log('不是版本化交易，尝试传统交易格式...');
+                            // 如果失败，尝试传统交易
+                            transaction = solanaWeb3.Transaction.from(transactionBytes);
+                            console.log('传统交易解码成功:', transaction);
+                        }
                         
-                        // 获取最新区块哈希
-                        const { blockhash } = await connection.getLatestBlockhash();
-                        transaction.recentBlockhash = blockhash;
-                        
-                        console.log('准备签名交易...');
+                        if (isVersioned) {
+                            // 版本化交易处理
+                            console.log('准备签名版本化交易...');
+                            
+                            // 通过钱包签名版本化交易
+                            const signedTransaction = await provider.signTransaction(transaction);
+                            
+                            console.log('版本化交易签名成功，准备发送...');
+                            
+                            // 发送版本化交易到区块链
+                            const signature = await connection.sendTransaction(signedTransaction, {
+                                skipPreflight: false,
+                                preflightCommitment: 'processed',
+                            });
+                            
+                            console.log('版本化交易已发送，等待确认...', signature);
+                            
+                            // 等待交易确认
+                            const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+                            
+                            if (confirmation.value.err) {
+                                throw new Error('交易确认失败: ' + JSON.stringify(confirmation.value.err));
+                            }
+                            
+                            console.log('版本化交易成功确认:', signature);
+                            
+                            return {
+                                mint: apiResult.mint,
+                                poolId: apiResult.poolId,
+                                poolPrice: apiResult.poolPrice,
+                                signature: signature,
+                                transactionFromAPI: apiResult.transaction,
+                                confirmed: true,
+                                transactionType: 'versioned',
+                                metadata: {
+                                    name: tokenName,
+                                    symbol: tokenSymbol,
+                                    uri: metadataUri
+                                }
+                            };
+                            
+                        } else {
+                            // 传统交易处理
+                            // 设置费用支付者
+                            transaction.feePayer = walletPublicKey;
+                            
+                            // 获取最新区块哈希
+                            const { blockhash } = await connection.getLatestBlockhash();
+                            transaction.recentBlockhash = blockhash;
+                            
+                            console.log('准备签名传统交易...');
 
-                        // 通过钱包签名交易
-                        const signedTransaction = await provider.signTransaction(transaction);
+                            // 通过钱包签名交易
+                            const signedTransaction = await provider.signTransaction(transaction);
                         
                         console.log('交易签名成功，准备发送...');
                         
