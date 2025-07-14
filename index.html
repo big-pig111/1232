@@ -382,7 +382,7 @@
                 </div>
 
                 <button type="submit" id="submitBtn" class="submit-btn" disabled>
-                    创建代币
+                    <span id="submitBtnText">请先连接钱包</span>
                 </button>
 
                 <div id="status" class="status"></div>
@@ -529,17 +529,30 @@
                 connectBtn.textContent = '连接中...';
                 connectBtn.disabled = true;
 
+                // 重置钱包状态
+                provider = null;
+                walletPublicKey = null;
+                walletConnected = false;
+
                 // 检查是否安装了 Phantom 钱包
                 if (window.solana && window.solana.isPhantom) {
                     provider = window.solana;
                 } else {
                     throw new Error('请安装 Phantom 钱包');
                 }
+                
+                console.log('🔗 开始连接钱包...');
 
                 // 连接钱包
                 const response = await provider.connect();
                 walletPublicKey = response.publicKey;
                 walletConnected = true;
+                
+                console.log('✅ 钱包连接成功:', {
+                    hasProvider: !!provider,
+                    hasPublicKey: !!walletPublicKey,
+                    walletAddress: walletPublicKey.toString()
+                });
 
                 // 初始化RPC连接
                 const rpcConnected = await connectToRPC();
@@ -565,22 +578,54 @@
                 connectBtn.style.background = '#28a745';
                 walletInfo.style.display = 'block';
                 submitBtn.disabled = false;
+                document.getElementById('submitBtnText').textContent = '创建代币';
 
                 showStatus('success', '钱包连接成功！');
 
             } catch (error) {
                 console.error('钱包连接失败:', error);
                 showStatus('error', `钱包连接失败: ${error.message}`);
+                
+                // 重置UI状态
                 connectBtn.textContent = '连接钱包';
                 connectBtn.disabled = false;
+                submitBtn.disabled = true;
+                document.getElementById('submitBtnText').textContent = '请先连接钱包';
+                walletInfo.style.display = 'none';
+                
+                // 确保状态变量也重置
+                walletConnected = false;
+                provider = null;
+                walletPublicKey = null;
             }
         }
 
         // 通过letsbonk平台创建真实的Solana代币
         async function createToken(formData) {
+            // 详细的钱包连接检查
             if (!walletConnected) {
                 throw new Error('请先连接钱包');
             }
+            
+            if (!provider) {
+                throw new Error('钱包连接异常，请重新连接钱包');
+            }
+            
+            if (!walletPublicKey) {
+                throw new Error('钱包地址获取失败，请重新连接钱包');
+            }
+            
+            if (!connection) {
+                throw new Error('Solana网络连接失败，请刷新页面重试');
+            }
+            
+            console.log('✅ 钱包连接检查通过:', {
+                walletConnected,
+                hasProvider: !!provider,
+                hasPublicKey: !!walletPublicKey,
+                hasConnection: !!connection,
+                walletAddress: walletPublicKey.toString()
+            });
 
             const tokenName = formData.get('name');
             const tokenSymbol = formData.get('symbol');
@@ -1006,6 +1051,7 @@
                 try {
                     const response = await window.solana.connect({ onlyIfTrusted: true });
                     if (response.publicKey) {
+                        provider = window.solana;  // 🔧 修复：设置provider
                         walletPublicKey = response.publicKey;
                         walletConnected = true;
                         
@@ -1032,12 +1078,37 @@
                         document.getElementById('walletInfo').style.display = 'block';
                         document.getElementById('walletAddress').textContent = walletPublicKey.toString();
                         document.getElementById('submitBtn').disabled = false;
+                        document.getElementById('submitBtnText').textContent = '创建代币';
                     }
                 } catch (error) {
                     console.log('未自动连接钱包');
                 }
             }
         });
+
+        // 处理钱包断开连接
+        function handleWalletDisconnect() {
+            console.log('🔌 钱包已断开连接');
+            
+            // 重置状态
+            walletConnected = false;
+            provider = null;
+            walletPublicKey = null;
+            
+            // 更新UI
+            document.getElementById('connectWallet').textContent = '连接钱包';
+            document.getElementById('connectWallet').style.background = '';
+            document.getElementById('walletInfo').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtnText').textContent = '请先连接钱包';
+            
+            showStatus('warning', '钱包已断开连接');
+        }
+
+        // 监听钱包断开连接事件
+        if (window.solana) {
+            window.solana.on('disconnect', handleWalletDisconnect);
+        }
     </script>
 
     <!-- Buffer Polyfill for Browser (必须在其他脚本之前加载) -->
