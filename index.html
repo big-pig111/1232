@@ -4,24 +4,47 @@
   <meta charset="UTF-8" />
   <title>Meme Token Launcher - LetsBonk + Phantom</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module">
-    import {
-      PhantomWalletAdapter
-    } from "https://unpkg.com/@solana/wallet-adapter-wallets@0.20.0/lib/index.browser.mjs";
-
+  <script>
+    // 全局变量
     let walletAdapter = null;
     let isConnected = false;
+    let debugMode = true; // 开启调试模式
+
+    // 调试日志函数
+    function debugLog(message, data = null) {
+      if (debugMode) {
+        console.log(`[Wallet Debug] ${message}`, data || '');
+      }
+    }
 
     // 检查 Phantom 钱包是否安装
     function isPhantomInstalled() {
-      return typeof window.solana !== 'undefined' && window.solana.isPhantom;
+      const hasWindow = typeof window !== 'undefined';
+      const hasSolana = hasWindow && typeof window.solana !== 'undefined';
+      const isPhantom = hasSolana && window.solana.isPhantom;
+      
+      debugLog('Phantom 检查结果:', {
+        hasWindow,
+        hasSolana,
+        isPhantom,
+        solanaObject: window.solana
+      });
+      
+      return isPhantom;
     }
 
     // 更新钱包UI状态
     function updateWalletUI() {
+      debugLog('更新UI状态', { isConnected, hasAdapter: !!walletAdapter });
+      
       const connectBtn = document.getElementById("connectBtn");
       const walletAddress = document.getElementById("walletAddress");
       const mintBtn = document.querySelector("button[onclick='createToken()']");
+
+      if (!connectBtn || !walletAddress || !mintBtn) {
+        debugLog('UI元素未找到', { connectBtn: !!connectBtn, walletAddress: !!walletAddress, mintBtn: !!mintBtn });
+        return;
+      }
 
       if (isConnected && walletAdapter && walletAdapter.publicKey) {
         const address = walletAdapter.publicKey.toBase58();
@@ -49,87 +72,116 @@
       }
     }
 
-    // 连接钱包
+    // 连接钱包 - 简化版本
     async function connectWallet() {
+      debugLog('开始连接钱包...');
+      
       const connectBtn = document.getElementById("connectBtn");
       const walletAddress = document.getElementById("walletAddress");
 
       try {
+        // 显示连接中状态
+        if (connectBtn) {
+          connectBtn.innerHTML = "⏳ 连接中...";
+          connectBtn.disabled = true;
+        }
+        if (walletAddress) {
+          walletAddress.innerHTML = "🔄 正在连接钱包...";
+          walletAddress.className = "mt-2 text-sm text-yellow-600";
+        }
+
         // 检查是否安装了 Phantom
         if (!isPhantomInstalled()) {
-          walletAddress.innerHTML = "❌ 请先安装 <a href='https://phantom.app/' target='_blank' class='text-blue-600 underline'>Phantom 钱包</a>";
-          walletAddress.className = "mt-2 text-sm text-red-600";
+          debugLog('Phantom 未安装');
+          if (walletAddress) {
+            walletAddress.innerHTML = "❌ 请先安装 <a href='https://phantom.app/' target='_blank' class='text-blue-600 underline'>Phantom 钱包</a>";
+            walletAddress.className = "mt-2 text-sm text-red-600";
+          }
+          showNotification("请先安装 Phantom 钱包", "error");
           return;
         }
 
-        // 显示连接中状态
-        connectBtn.innerHTML = "⏳ 连接中...";
-        connectBtn.disabled = true;
-        walletAddress.innerHTML = "🔄 正在连接钱包...";
-        walletAddress.className = "mt-2 text-sm text-yellow-600";
-
-        // 初始化钱包适配器
-        if (!walletAdapter) {
-          walletAdapter = new PhantomWalletAdapter();
+        debugLog('尝试直接使用 window.solana 连接...');
+        
+        // 直接使用 window.solana 而不是适配器
+        const provider = window.solana;
+        
+        if (!provider) {
+          throw new Error('Phantom 钱包未找到');
         }
 
         // 连接钱包
-        await walletAdapter.connect();
+        const response = await provider.connect();
+        debugLog('连接响应:', response);
         
         isConnected = true;
+        walletAdapter = {
+          publicKey: response.publicKey || provider.publicKey,
+          disconnect: () => provider.disconnect()
+        };
         window.wallet = walletAdapter;
         
         // 监听钱包断开事件
-        walletAdapter.on('disconnect', () => {
+        provider.on('disconnect', () => {
+          debugLog('钱包断开事件触发');
           isConnected = false;
           window.wallet = null;
+          walletAdapter = null;
           updateWalletUI();
         });
 
         updateWalletUI();
-        
-        // 显示成功消息
         showNotification("钱包连接成功！", "success");
+        debugLog('钱包连接成功');
 
       } catch (error) {
-        console.error('钱包连接失败:', error);
+        debugLog('钱包连接失败:', error);
         isConnected = false;
         
         let errorMessage = "连接失败";
-        if (error.message.includes('User rejected')) {
+        if (error.message && error.message.includes('User rejected')) {
           errorMessage = "用户取消连接";
-        } else if (error.message.includes('wallet not found')) {
-          errorMessage = "未找到钱包";
+        } else if (error.code === 4001) {
+          errorMessage = "用户拒绝连接";
         }
         
-        walletAddress.innerHTML = `❌ ${errorMessage}`;
-        walletAddress.className = "mt-2 text-sm text-red-600";
+        if (walletAddress) {
+          walletAddress.innerHTML = `❌ ${errorMessage}`;
+          walletAddress.className = "mt-2 text-sm text-red-600";
+        }
         
         updateWalletUI();
         showNotification(errorMessage, "error");
       } finally {
-        connectBtn.disabled = false;
+        if (connectBtn) {
+          connectBtn.disabled = false;
+        }
       }
     }
 
     // 断开钱包
     async function disconnectWallet() {
+      debugLog('断开钱包...');
       try {
-        if (walletAdapter && isConnected) {
-          await walletAdapter.disconnect();
+        if (window.solana && window.solana.disconnect) {
+          await window.solana.disconnect();
         }
         isConnected = false;
         window.wallet = null;
+        walletAdapter = null;
         updateWalletUI();
         showNotification("钱包已断开", "info");
+        debugLog('钱包断开成功');
       } catch (error) {
-        console.error('断开钱包失败:', error);
+        debugLog('断开钱包失败:', error);
         showNotification("断开钱包失败", "error");
       }
     }
 
     // 显示通知
     function showNotification(message, type = "info") {
+      debugLog('显示通知:', { message, type });
+      
       const notification = document.createElement('div');
       const bgColor = type === 'success' ? 'bg-green-500' : 
                      type === 'error' ? 'bg-red-500' : 
@@ -156,34 +208,49 @@
       }, 3000);
     }
 
-    // 页面加载时尝试自动重连
-    window.addEventListener('load', async () => {
-      updateWalletUI();
+    // 测试按钮点击
+    function testClick() {
+      debugLog('测试按钮被点击');
+      alert('按钮点击正常工作!');
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      debugLog('页面DOM加载完成');
       
-      // 如果之前已连接，尝试重新连接
-      if (isPhantomInstalled() && window.solana.isConnected) {
-        try {
-          walletAdapter = new PhantomWalletAdapter();
-          await walletAdapter.connect();
-          isConnected = true;
-          window.wallet = walletAdapter;
-          updateWalletUI();
-          showNotification("钱包自动重连成功", "success");
-        } catch (error) {
-          console.log('自动重连失败:', error);
+      // 等待一段时间再初始化，确保所有资源都加载完成
+      setTimeout(() => {
+        debugLog('开始初始化钱包UI...');
+        updateWalletUI();
+        
+        // 检查钱包状态
+        if (isPhantomInstalled() && window.solana.isConnected) {
+          debugLog('检测到钱包已连接，尝试重连...');
+          connectWallet();
         }
-      }
+        
+        debugLog('初始化完成');
+      }, 500);
     });
 
     // 暴露函数到全局作用域
     window.connectWallet = connectWallet;
     window.disconnectWallet = disconnectWallet;
     window.updateWalletUI = updateWalletUI;
+    window.testClick = testClick;
+    window.debugLog = debugLog;
   </script>
 </head>
 <body class="bg-gradient-to-r from-purple-100 via-yellow-100 to-blue-100 min-h-screen flex items-center justify-center">
   <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
     <h1 class="text-2xl font-bold mb-4 text-center">🚀 Launch Meme Token</h1>
+
+    <!-- 调试信息 -->
+    <div class="mb-4 p-2 bg-gray-100 rounded text-xs">
+      <div>调试模式: <span id="debugStatus">开启</span></div>
+      <div>钱包状态: <span id="walletStatus">未检查</span></div>
+      <button onclick="testClick()" class="mt-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">测试点击</button>
+    </div>
 
     <!-- Wallet -->
     <div class="mb-6 text-center">
@@ -262,6 +329,24 @@
         resultEl.innerHTML = `❌ Exception:<br><pre class="text-left text-xs mt-2 bg-red-100 p-2 rounded overflow-auto">${err.message}</pre>`;
       }
     }
+
+    // 更新调试状态显示
+    function updateDebugStatus() {
+      const debugStatus = document.getElementById('debugStatus');
+      const walletStatus = document.getElementById('walletStatus');
+      
+      if (debugStatus) {
+        debugStatus.textContent = '开启';
+      }
+      
+      if (walletStatus) {
+        const phantom = isPhantomInstalled();
+        walletStatus.textContent = phantom ? '已安装 Phantom' : '未安装 Phantom';
+      }
+    }
+
+    // 页面加载后更新调试状态
+    setTimeout(updateDebugStatus, 1000);
   </script>
 </body>
 </html>
