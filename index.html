@@ -415,8 +415,8 @@
                 walletPublicKey = response.publicKey;
                 walletConnected = true;
 
-                // 初始化连接 - 使用主网（letsbonk平台运行在主网）
-                connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+                // 初始化连接 - 使用免费的RPC端点（支持CORS）
+                connection = new solanaWeb3.Connection('https://solana-api.projectserum.com');
 
                 // 获取余额
                 try {
@@ -500,9 +500,13 @@
                 // 2. 如果API返回了交易数据，需要签名并发送
                 if (apiResult.transaction) {
                     try {
+                        console.log('开始处理交易数据...');
+                        
                         // 解码base64交易数据
-                        const transactionBuffer = Buffer.from(apiResult.transaction, 'base64');
-                        const transaction = solanaWeb3.Transaction.from(transactionBuffer);
+                        const transactionBytes = Uint8Array.from(atob(apiResult.transaction), c => c.charCodeAt(0));
+                        const transaction = solanaWeb3.Transaction.from(transactionBytes);
+                        
+                        console.log('交易解码成功:', transaction);
                         
                         // 设置费用支付者
                         transaction.feePayer = walletPublicKey;
@@ -510,17 +514,30 @@
                         // 获取最新区块哈希
                         const { blockhash } = await connection.getLatestBlockhash();
                         transaction.recentBlockhash = blockhash;
+                        
+                        console.log('准备签名交易...');
 
                         // 通过钱包签名交易
                         const signedTransaction = await provider.signTransaction(transaction);
                         
+                        console.log('交易签名成功，准备发送...');
+                        
                         // 发送交易到区块链
-                        const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+                        const signature = await connection.sendRawTransaction(signedTransaction.serialize(), {
+                            skipPreflight: false,
+                            preflightCommitment: 'processed',
+                        });
+                        
+                        console.log('交易已发送，等待确认...', signature);
                         
                         // 等待交易确认
-                        await connection.confirmTransaction(signature, 'confirmed');
+                        const confirmation = await connection.confirmTransaction(signature, 'confirmed');
                         
-                        console.log('交易成功发送:', signature);
+                        if (confirmation.value.err) {
+                            throw new Error('交易确认失败: ' + JSON.stringify(confirmation.value.err));
+                        }
+                        
+                        console.log('交易成功确认:', signature);
 
                         // 返回完整结果
                         return {
@@ -529,6 +546,7 @@
                             poolPrice: apiResult.poolPrice,
                             signature: signature,
                             transactionFromAPI: apiResult.transaction,
+                            confirmed: true,
                             metadata: {
                                 name: tokenName,
                                 symbol: tokenSymbol,
@@ -538,10 +556,13 @@
 
                     } catch (txError) {
                         console.error('交易处理失败:', txError);
+                        console.error('错误详情:', txError.stack);
+                        
                         // 如果交易失败，但API成功，仍然返回API结果
                         return {
                             ...apiResult,
                             signature: null,
+                            confirmed: false,
                             error: '交易签名或发送失败: ' + txError.message,
                             metadata: {
                                 name: tokenName,
@@ -551,9 +572,11 @@
                         };
                     }
                 } else {
+                    console.log('API没有返回交易数据，可能代币已直接创建');
                     // 如果没有交易数据，直接返回API结果
                     return {
                         ...apiResult,
+                        directCreation: true,
                         metadata: {
                             name: tokenName,
                             symbol: tokenSymbol,
@@ -650,11 +673,35 @@
                 `;
             }
 
+            // 显示创建状态
+            if (data.confirmed === true) {
+                resultHtml += `
+                    <div class="result-item" style="color: #28a745;">
+                        <span><strong>状态:</strong></span>
+                        <span>✅ 代币创建成功并已在区块链确认</span>
+                    </div>
+                `;
+            } else if (data.confirmed === false) {
+                resultHtml += `
+                    <div class="result-item" style="color: #ffc107;">
+                        <span><strong>状态:</strong></span>
+                        <span>⚠️ 代币创建但区块链确认失败</span>
+                    </div>
+                `;
+            } else if (data.directCreation) {
+                resultHtml += `
+                    <div class="result-item" style="color: #17a2b8;">
+                        <span><strong>状态:</strong></span>
+                        <span>ℹ️ 代币已通过平台直接创建</span>
+                    </div>
+                `;
+            }
+
             // 如果有错误信息，显示它
             if (data.error) {
                 resultHtml += `
                     <div class="result-item" style="color: #dc3545;">
-                        <span><strong>注意:</strong></span>
+                        <span><strong>错误信息:</strong></span>
                         <span>${data.error}</span>
                     </div>
                 `;
@@ -746,8 +793,8 @@
                         walletPublicKey = response.publicKey;
                         walletConnected = true;
                         
-                        // 初始化连接 - 使用主网（letsbonk平台运行在主网）
-                        connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+                        // 初始化连接 - 使用免费的RPC端点（支持CORS）
+                        connection = new solanaWeb3.Connection('https://solana-api.projectserum.com');
                         
                         // 获取余额
                         try {
@@ -771,6 +818,12 @@
         });
     </script>
 
+    <!-- Buffer Polyfill for Browser -->
+    <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
+    <script>
+        // 设置全局Buffer
+        window.Buffer = buffer.Buffer;
+    </script>
     <!-- Solana Web3.js -->
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 </body>
