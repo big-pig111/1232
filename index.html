@@ -575,40 +575,42 @@
 
                             // 通过钱包签名交易
                             const signedTransaction = await provider.signTransaction(transaction);
-                        
-                        console.log('交易签名成功，准备发送...');
-                        
-                        // 发送交易到区块链
-                        const signature = await connection.sendRawTransaction(signedTransaction.serialize(), {
-                            skipPreflight: false,
-                            preflightCommitment: 'processed',
-                        });
-                        
-                        console.log('交易已发送，等待确认...', signature);
-                        
-                        // 等待交易确认
-                        const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-                        
-                        if (confirmation.value.err) {
-                            throw new Error('交易确认失败: ' + JSON.stringify(confirmation.value.err));
-                        }
-                        
-                        console.log('交易成功确认:', signature);
-
-                        // 返回完整结果
-                        return {
-                            mint: apiResult.mint,
-                            poolId: apiResult.poolId,
-                            poolPrice: apiResult.poolPrice,
-                            signature: signature,
-                            transactionFromAPI: apiResult.transaction,
-                            confirmed: true,
-                            metadata: {
-                                name: tokenName,
-                                symbol: tokenSymbol,
-                                uri: metadataUri
+                            
+                            console.log('传统交易签名成功，准备发送...');
+                            
+                            // 发送交易到区块链
+                            const signature = await connection.sendRawTransaction(signedTransaction.serialize(), {
+                                skipPreflight: false,
+                                preflightCommitment: 'processed',
+                            });
+                            
+                            console.log('传统交易已发送，等待确认...', signature);
+                            
+                            // 等待交易确认
+                            const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+                            
+                            if (confirmation.value.err) {
+                                throw new Error('交易确认失败: ' + JSON.stringify(confirmation.value.err));
                             }
-                        };
+                            
+                            console.log('传统交易成功确认:', signature);
+
+                            // 返回完整结果
+                            return {
+                                mint: apiResult.mint,
+                                poolId: apiResult.poolId,
+                                poolPrice: apiResult.poolPrice,
+                                signature: signature,
+                                transactionFromAPI: apiResult.transaction,
+                                confirmed: true,
+                                transactionType: 'legacy',
+                                metadata: {
+                                    name: tokenName,
+                                    symbol: tokenSymbol,
+                                    uri: metadataUri
+                                }
+                            };
+                        }
 
                     } catch (txError) {
                         console.error('交易处理失败:', txError);
@@ -874,7 +876,7 @@
         });
     </script>
 
-    <!-- Buffer Polyfill for Browser -->
+    <!-- Buffer Polyfill for Browser (必须在其他脚本之前加载) -->
     <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
     <script>
         // 设置全局Buffer
