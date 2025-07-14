@@ -9,13 +9,176 @@
       PhantomWalletAdapter
     } from "https://unpkg.com/@solana/wallet-adapter-wallets@0.20.0/lib/index.browser.mjs";
 
-    window.initWallet = async function () {
-      const phantom = new PhantomWalletAdapter();
-      await phantom.connect();
-      window.wallet = phantom;
-      const addr = phantom.publicKey.toBase58();
-      document.getElementById("walletAddress").innerText = "🟢 Connected: " + addr;
-    };
+    let walletAdapter = null;
+    let isConnected = false;
+
+    // 检查 Phantom 钱包是否安装
+    function isPhantomInstalled() {
+      return typeof window.solana !== 'undefined' && window.solana.isPhantom;
+    }
+
+    // 更新钱包UI状态
+    function updateWalletUI() {
+      const connectBtn = document.getElementById("connectBtn");
+      const walletAddress = document.getElementById("walletAddress");
+      const mintBtn = document.querySelector("button[onclick='createToken()']");
+
+      if (isConnected && walletAdapter && walletAdapter.publicKey) {
+        const address = walletAdapter.publicKey.toBase58();
+        const shortAddress = `${address.slice(0, 4)}...${address.slice(-4)}`;
+        
+        connectBtn.innerHTML = "🔗 断开钱包";
+        connectBtn.className = "bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700";
+        connectBtn.onclick = disconnectWallet;
+        
+        walletAddress.innerHTML = `🟢 已连接: <span class="font-mono">${shortAddress}</span>`;
+        walletAddress.className = "mt-2 text-sm text-green-600 font-medium";
+        
+        mintBtn.disabled = false;
+        mintBtn.className = "mt-6 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 font-semibold";
+      } else {
+        connectBtn.innerHTML = "🔌 连接 Phantom";
+        connectBtn.className = "bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700";
+        connectBtn.onclick = connectWallet;
+        
+        walletAddress.innerHTML = "🔴 未连接钱包";
+        walletAddress.className = "mt-2 text-sm text-red-600";
+        
+        mintBtn.disabled = true;
+        mintBtn.className = "mt-6 w-full bg-gray-400 text-white py-2 rounded cursor-not-allowed font-semibold";
+      }
+    }
+
+    // 连接钱包
+    async function connectWallet() {
+      const connectBtn = document.getElementById("connectBtn");
+      const walletAddress = document.getElementById("walletAddress");
+
+      try {
+        // 检查是否安装了 Phantom
+        if (!isPhantomInstalled()) {
+          walletAddress.innerHTML = "❌ 请先安装 <a href='https://phantom.app/' target='_blank' class='text-blue-600 underline'>Phantom 钱包</a>";
+          walletAddress.className = "mt-2 text-sm text-red-600";
+          return;
+        }
+
+        // 显示连接中状态
+        connectBtn.innerHTML = "⏳ 连接中...";
+        connectBtn.disabled = true;
+        walletAddress.innerHTML = "🔄 正在连接钱包...";
+        walletAddress.className = "mt-2 text-sm text-yellow-600";
+
+        // 初始化钱包适配器
+        if (!walletAdapter) {
+          walletAdapter = new PhantomWalletAdapter();
+        }
+
+        // 连接钱包
+        await walletAdapter.connect();
+        
+        isConnected = true;
+        window.wallet = walletAdapter;
+        
+        // 监听钱包断开事件
+        walletAdapter.on('disconnect', () => {
+          isConnected = false;
+          window.wallet = null;
+          updateWalletUI();
+        });
+
+        updateWalletUI();
+        
+        // 显示成功消息
+        showNotification("钱包连接成功！", "success");
+
+      } catch (error) {
+        console.error('钱包连接失败:', error);
+        isConnected = false;
+        
+        let errorMessage = "连接失败";
+        if (error.message.includes('User rejected')) {
+          errorMessage = "用户取消连接";
+        } else if (error.message.includes('wallet not found')) {
+          errorMessage = "未找到钱包";
+        }
+        
+        walletAddress.innerHTML = `❌ ${errorMessage}`;
+        walletAddress.className = "mt-2 text-sm text-red-600";
+        
+        updateWalletUI();
+        showNotification(errorMessage, "error");
+      } finally {
+        connectBtn.disabled = false;
+      }
+    }
+
+    // 断开钱包
+    async function disconnectWallet() {
+      try {
+        if (walletAdapter && isConnected) {
+          await walletAdapter.disconnect();
+        }
+        isConnected = false;
+        window.wallet = null;
+        updateWalletUI();
+        showNotification("钱包已断开", "info");
+      } catch (error) {
+        console.error('断开钱包失败:', error);
+        showNotification("断开钱包失败", "error");
+      }
+    }
+
+    // 显示通知
+    function showNotification(message, type = "info") {
+      const notification = document.createElement('div');
+      const bgColor = type === 'success' ? 'bg-green-500' : 
+                     type === 'error' ? 'bg-red-500' : 
+                     type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
+      
+      notification.className = `fixed top-4 right-4 ${bgColor} text-white px-4 py-2 rounded shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+      notification.textContent = message;
+      
+      document.body.appendChild(notification);
+      
+      // 显示动画
+      setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+      }, 100);
+      
+      // 3秒后移除
+      setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, 3000);
+    }
+
+    // 页面加载时尝试自动重连
+    window.addEventListener('load', async () => {
+      updateWalletUI();
+      
+      // 如果之前已连接，尝试重新连接
+      if (isPhantomInstalled() && window.solana.isConnected) {
+        try {
+          walletAdapter = new PhantomWalletAdapter();
+          await walletAdapter.connect();
+          isConnected = true;
+          window.wallet = walletAdapter;
+          updateWalletUI();
+          showNotification("钱包自动重连成功", "success");
+        } catch (error) {
+          console.log('自动重连失败:', error);
+        }
+      }
+    });
+
+    // 暴露函数到全局作用域
+    window.connectWallet = connectWallet;
+    window.disconnectWallet = disconnectWallet;
+    window.updateWalletUI = updateWalletUI;
   </script>
 </head>
 <body class="bg-gradient-to-r from-purple-100 via-yellow-100 to-blue-100 min-h-screen flex items-center justify-center">
@@ -24,10 +187,10 @@
 
     <!-- Wallet -->
     <div class="mb-6 text-center">
-      <button onclick="initWallet()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
-        Connect Phantom
+      <button id="connectBtn" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+        🔌 连接 Phantom
       </button>
-      <div id="walletAddress" class="mt-2 text-sm text-gray-600"></div>
+      <div id="walletAddress" class="mt-2 text-sm text-red-600">🔴 未连接钱包</div>
     </div>
 
     <!-- Form -->
@@ -39,7 +202,7 @@
       <input type="text" id="buyAmount" placeholder="Initial Buy Amount" class="w-full px-4 py-2 rounded border border-gray-300">
     </div>
 
-    <button onclick="createToken()" class="mt-6 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 font-semibold">
+    <button onclick="createToken()" class="mt-6 w-full bg-gray-400 text-white py-2 rounded cursor-not-allowed font-semibold" disabled>
       Mint Token
     </button>
 
@@ -48,11 +211,23 @@
 
   <script>
     async function createToken() {
+      // 检查钱包连接状态
+      if (!window.wallet || !window.wallet.publicKey) {
+        document.getElementById("result").innerHTML = "❌ 请先连接钱包";
+        return;
+      }
+
       const name = document.getElementById("name").value;
       const symbol = document.getElementById("symbol").value;
       const decimals = parseInt(document.getElementById("decimals").value);
       const supply = document.getElementById("supply").value;
       const buyAmount = document.getElementById("buyAmount").value;
+
+      // 表单验证
+      if (!name || !symbol || !supply) {
+        document.getElementById("result").innerHTML = "❌ 请填写所有必填字段";
+        return;
+      }
 
       const resultEl = document.getElementById("result");
       resultEl.innerText = "⏳ Minting in progress...";
@@ -79,12 +254,12 @@
         const data = await res.json();
 
         if (res.ok) {
-          resultEl.innerHTML = `✅ Token created!<br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+          resultEl.innerHTML = `✅ Token created!<br><pre class="text-left text-xs mt-2 bg-gray-100 p-2 rounded overflow-auto">${JSON.stringify(data, null, 2)}</pre>`;
         } else {
-          resultEl.innerHTML = `❌ Error:<br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+          resultEl.innerHTML = `❌ Error:<br><pre class="text-left text-xs mt-2 bg-red-100 p-2 rounded overflow-auto">${JSON.stringify(data, null, 2)}</pre>`;
         }
       } catch (err) {
-        resultEl.innerHTML = `❌ Exception:<br><pre>${err.message}</pre>`;
+        resultEl.innerHTML = `❌ Exception:<br><pre class="text-left text-xs mt-2 bg-red-100 p-2 rounded overflow-auto">${err.message}</pre>`;
       }
     }
   </script>
