@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LetsBonk 代币铸造平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .wallet-section {
+            padding: 30px;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+
+        .wallet-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .wallet-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .wallet-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .wallet-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .form-section {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status {
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 10px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .help-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .advanced-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .advanced-toggle {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .result-section {
+            padding: 30px;
+            background: #f8f9fa;
+            display: none;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 LetsBonk 代币铸造</h1>
+            <p>轻松创建您的 Solana 代币</p>
+        </div>
+
+        <div class="wallet-section">
+            <button id="connectWallet" class="wallet-btn">连接钱包</button>
+            <div id="walletInfo" class="wallet-info">
+                <strong>已连接钱包：</strong>
+                <div id="walletAddress"></div>
+                <div id="walletBalance"></div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <form id="mintForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tokenName">代币名称 *</label>
+                        <input type="text" id="tokenName" name="name" required placeholder="例如：BonkMeme">
+                        <div class="help-text">代币的完整名称</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="tokenSymbol">代币符号 *</label>
+                        <input type="text" id="tokenSymbol" name="symbol" required placeholder="例如：BMEME" maxlength="10">
+                        <div class="help-text">代币的简短符号（建议3-6个字符）</div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="decimals">小数位数 *</label>
+                        <select id="decimals" name="decimals" required>
+                            <option value="6">6 (推荐)</option>
+                            <option value="9">9 (SOL标准)</option>
+                            <option value="0">0 (整数)</option>
+                            <option value="2">2</option>
+                            <option value="8">8</option>
+                        </select>
+                        <div class="help-text">代币的小数位数</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="supply">总供应量 *</label>
+                        <input type="number" id="supply" name="supply" required placeholder="1000000000000000" min="1">
+                        <div class="help-text">代币的总发行量</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="metadataUri">元数据 URI</label>
+                    <input type="url" id="metadataUri" name="uri" placeholder="https://ipfs.io/ipfs/...">
+                    <div class="help-text">代币图标和描述的IPFS链接（可选）</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="buyAmount">初始购买金额</label>
+                        <input type="number" id="buyAmount" name="buyAmount" placeholder="10000000" min="0">
+                        <div class="help-text">创建时购买的代币数量</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="slippage">滑点容忍度 (%)</label>
+                        <select id="slippage" name="slippage">
+                            <option value="10">10%</option>
+                            <option value="25">25%</option>
+                            <option value="50" selected>50%</option>
+                            <option value="100">100%</option>
+                        </select>
+                        <div class="help-text">交易滑点容忍度</div>
+                    </div>
+                </div>
+
+                <button type="button" class="advanced-toggle" onclick="toggleAdvanced()">
+                    高级设置 ▼
+                </button>
+
+                <div id="advancedSection" class="advanced-section" style="display: none;">
+                    <div class="form-group">
+                        <label for="platformId">平台 ID</label>
+                        <input type="text" id="platformId" name="platformId" value="FfYek5vEz23cMkWsdJwG2oa6EphsvXSHrGpdALN4g6W1">
+                    </div>
+                    <div class="form-group">
+                        <label for="programId">程序 ID</label>
+                        <input type="text" id="programId" name="programId" value="LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="totalSellA">总销售量 A</label>
+                            <input type="number" id="totalSellA" name="totalSellA" placeholder="793100000000000">
+                        </div>
+                        <div class="form-group">
+                            <label for="migrateType">迁移类型</label>
+                            <select id="migrateType" name="migrateType">
+                                <option value="amm" selected>AMM</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="createOnly" name="createOnly"> 仅创建（不购买）
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="useBonkMintAddress" name="useBonkMintAddress"> 使用 Bonk Mint 地址
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="submit-btn" disabled>
+                    创建代币
+                </button>
+
+                <div id="status" class="status"></div>
+            </form>
+        </div>
+
+        <div id="resultSection" class="result-section">
+            <h3>🎉 代币创建成功！</h3>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let walletConnected = false;
+        let walletPublicKey = null;
+        let provider = null;
+
+        // 钱包连接功能
+        async function connectWallet() {
+            const connectBtn = document.getElementById('connectWallet');
+            const walletInfo = document.getElementById('walletInfo');
+            const submitBtn = document.getElementById('submitBtn');
+
+            try {
+                connectBtn.textContent = '连接中...';
+                connectBtn.disabled = true;
+
+                // 检查是否安装了 Phantom 钱包
+                if (window.solana && window.solana.isPhantom) {
+                    provider = window.solana;
+                } else {
+                    throw new Error('请安装 Phantom 钱包');
+                }
+
+                // 连接钱包
+                const response = await provider.connect();
+                walletPublicKey = response.publicKey.toString();
+                walletConnected = true;
+
+                // 获取余额
+                try {
+                    const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+                    const balance = await connection.getBalance(response.publicKey);
+                    const balanceInSol = balance / solanaWeb3.LAMPORTS_PER_SOL;
+                    
+                    document.getElementById('walletAddress').textContent = walletPublicKey;
+                    document.getElementById('walletBalance').textContent = `余额: ${balanceInSol.toFixed(4)} SOL`;
+                } catch (e) {
+                    document.getElementById('walletAddress').textContent = walletPublicKey;
+                    document.getElementById('walletBalance').textContent = '余额: 无法获取';
+                }
+
+                connectBtn.textContent = '已连接';
+                connectBtn.style.background = '#28a745';
+                walletInfo.style.display = 'block';
+                submitBtn.disabled = false;
+
+                showStatus('success', '钱包连接成功！');
+
+            } catch (error) {
+                console.error('钱包连接失败:', error);
+                showStatus('error', `钱包连接失败: ${error.message}`);
+                connectBtn.textContent = '连接钱包';
+                connectBtn.disabled = false;
+            }
+        }
+
+        // 创建代币
+        async function createToken(formData) {
+            if (!walletConnected) {
+                throw new Error('请先连接钱包');
+            }
+
+            const requestData = {
+                name: formData.get('name'),
+                symbol: formData.get('symbol'),
+                decimals: parseInt(formData.get('decimals')),
+                supply: formData.get('supply'),
+                buyAmount: formData.get('buyAmount') || "0",
+                createOnly: formData.has('createOnly'),
+                migrateType: formData.get('migrateType') || "amm",
+                owner: walletPublicKey,
+                platformId: formData.get('platformId') || "FfYek5vEz23cMkWsdJwG2oa6EphsvXSHrGpdALN4g6W1",
+                programId: formData.get('programId') || "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj",
+                slippage: parseInt(formData.get('slippage')) || 50,
+                totalSellA: formData.get('totalSellA') || "793100000000000",
+                uri: formData.get('uri') || "https://ipfs.io/ipfs/bafkreib7v7eprkh2vihvpapa6xx6odhkoekyxfm5x5i4iaoub5pd32axhi",
+                useBonkMintAddress: formData.has('useBonkMintAddress')
+            };
+
+            console.log('发送请求数据:', requestData);
+
+            const response = await fetch('https://launch.letsbonk.fun/launchpad/createMint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API请求失败: ${response.status} - ${errorText}`);
+            }
+
+            return await response.json();
+        }
+
+        // 显示状态消息
+        function showStatus(type, message) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            status.style.display = 'block';
+
+            if (type === 'loading') {
+                status.innerHTML = '<div class="loading-spinner"></div>' + message;
+            }
+
+            // 自动隐藏成功和错误消息
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // 显示结果
+        function showResult(data) {
+            const resultSection = document.getElementById('resultSection');
+            const resultContent = document.getElementById('resultContent');
+            
+            resultContent.innerHTML = `
+                <div class="result-item">
+                    <span><strong>Mint 地址:</strong></span>
+                    <div>
+                        <code>${data.mint}</code>
+                        <button class="copy-btn" onclick="copyToClipboard('${data.mint}')">复制</button>
+                    </div>
+                </div>
+                <div class="result-item">
+                    <span><strong>Pool ID:</strong></span>
+                    <div>
+                        <code>${data.poolId}</code>
+                        <button class="copy-btn" onclick="copyToClipboard('${data.poolId}')">复制</button>
+                    </div>
+                </div>
+                <div class="result-item">
+                    <span><strong>初始价格:</strong></span>
+                    <span>${data.poolPrice} SOL</span>
+                </div>
+                <div class="result-item">
+                    <span><strong>Solscan 链接:</strong></span>
+                    <a href="https://solscan.io/token/${data.mint}" target="_blank" style="color: #667eea;">查看代币</a>
+                </div>
+            `;
+            
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus('success', '已复制到剪贴板');
+            }).catch(() => {
+                showStatus('error', '复制失败');
+            });
+        }
+
+        // 切换高级设置
+        function toggleAdvanced() {
+            const section = document.getElementById('advancedSection');
+            const toggle = document.querySelector('.advanced-toggle');
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                toggle.textContent = '高级设置 ▲';
+            } else {
+                section.style.display = 'none';
+                toggle.textContent = '高级设置 ▼';
+            }
+        }
+
+        // 表单提交处理
+        document.getElementById('mintForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.textContent;
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '创建中...';
+                showStatus('loading', '正在创建代币，请稍候...');
+                
+                const formData = new FormData(e.target);
+                const result = await createToken(formData);
+                
+                console.log('代币创建成功:', result);
+                showStatus('success', '代币创建成功！');
+                showResult(result);
+                
+            } catch (error) {
+                console.error('代币创建失败:', error);
+                showStatus('error', `创建失败: ${error.message}`);
+            } finally {
+                submitBtn.disabled = !walletConnected;
+                submitBtn.textContent = originalText;
+            }
+        });
+
+        // 钱包连接按钮事件
+        document.getElementById('connectWallet').addEventListener('click', connectWallet);
+
+        // 页面加载时检查钱包连接状态
+        window.addEventListener('load', async () => {
+            if (window.solana && window.solana.isPhantom) {
+                try {
+                    const response = await window.solana.connect({ onlyIfTrusted: true });
+                    if (response.publicKey) {
+                        walletPublicKey = response.publicKey.toString();
+                        walletConnected = true;
+                        
+                        document.getElementById('connectWallet').textContent = '已连接';
+                        document.getElementById('connectWallet').style.background = '#28a745';
+                        document.getElementById('walletInfo').style.display = 'block';
+                        document.getElementById('walletAddress').textContent = walletPublicKey;
+                        document.getElementById('submitBtn').disabled = false;
+                    }
+                } catch (error) {
+                    console.log('未自动连接钱包');
+                }
+            }
+        });
+    </script>
+
+    <!-- Solana Web3.js -->
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+</body>
+</html>
