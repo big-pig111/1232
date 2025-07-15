@@ -220,7 +220,6 @@
     <header>
         <h1 class="site-title">山海经百科</h1>
         <p class="site-subtitle">探索上古异兽的神秘世界</p>
-        <button class="connect-wallet-btn" id="connectWalletBtn" style="position:absolute;top:32px;right:32px;z-index:1000;">连接钱包</button>
     </header>
 
     <!-- 搜索区域 -->
@@ -266,49 +265,6 @@
           <div style="font-size:0.9rem;color:#888;margin-bottom:1rem;"><span id="descCount">0</span>/100</div>
           <button type="submit" style="background:#8b7d6b;color:#fff;padding:0.6rem 2rem;border:none;border-radius:8px;cursor:pointer;">提交</button>
         </form>
-      </div>
-    </div>
-    <!-- 钱包连接弹窗 -->
-    <div class="wallet-modal" id="walletModal" style="display:none;">
-      <div class="wallet-modal-content">
-        <button class="close-btn" id="closeModalBtn">&times;</button>
-        <div class="modal-header">
-          <div class="modal-title">连接钱包</div>
-          <div class="modal-subtitle">选择您要连接的钱包</div>
-        </div>
-        <div class="wallet-options">
-          <div class="wallet-category">
-            <div class="category-title">Solana 钱包</div>
-          </div>
-          <div class="wallet-option" data-wallet="phantom">
-            <div class="wallet-icon">👻</div>
-            <div class="wallet-info">
-              <div class="wallet-name">Phantom</div>
-              <div class="wallet-desc">最受欢迎的Solana钱包</div>
-            </div>
-          </div>
-          <div class="wallet-option" data-wallet="okx">
-            <div class="wallet-icon">🟨</div>
-            <div class="wallet-info">
-              <div class="wallet-name">OKX Wallet</div>
-              <div class="wallet-desc">多链去中心化钱包</div>
-            </div>
-          </div>
-          <div class="wallet-option" data-wallet="solflare">
-            <div class="wallet-icon">☀️</div>
-            <div class="wallet-info">
-              <div class="wallet-name">Solflare</div>
-              <div class="wallet-desc">功能强大的Solana钱包</div>
-            </div>
-          </div>
-          <div class="wallet-option" data-wallet="slope">
-            <div class="wallet-icon">📈</div>
-            <div class="wallet-info">
-              <div class="wallet-name">Slope</div>
-              <div class="wallet-desc">移动优先的Solana钱包</div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
     <!-- Firebase SDK -->
@@ -548,37 +504,14 @@
         const beastName = document.getElementById('beastName');
         const beastDesc = document.getElementById('beastDesc');
         const descCount = document.getElementById('descCount');
-        const beastSubmitBtn = beastForm.querySelector('button[type="submit"]');
-
-        // 新增：弹窗内提示
-        let walletTip = document.getElementById('walletUploadTip');
-        if (!walletTip) {
-          walletTip = document.createElement('div');
-          walletTip.id = 'walletUploadTip';
-          walletTip.style = 'color:#c00;font-size:1rem;margin-bottom:1rem;display:none;';
-          beastForm.insertBefore(walletTip, beastForm.firstChild);
+        const submitBtn = beastForm.querySelector('button[type="submit"]');
+        let lastContentHash = '';
+        function getContentHash(name, desc, file) {
+          return name + '|' + desc + '|' + (file ? (file.name + '|' + file.size) : '');
         }
 
-        function updateUploadFormWalletState() {
-          if (typeof isWalletConnected !== 'function' || !isWalletConnected()) {
-            walletTip.textContent = '请先连接钱包后再上传';
-            walletTip.style.display = 'block';
-            beastSubmitBtn.disabled = true;
-          } else {
-            walletTip.textContent = '';
-            walletTip.style.display = 'none';
-            beastSubmitBtn.disabled = false;
-          }
-        }
-
-        addCard.onclick = async () => {
-          // 检查钱包是否已连接
-          if (typeof isWalletConnected !== 'function' || !isWalletConnected()) {
-            alert('请先在页面一连接钱包！');
-            return;
-          }
+        addCard.onclick = () => {
           addModal.style.display = 'flex';
-          updateUploadFormWalletState();
         };
         closeAddModal.onclick = () => {
           addModal.style.display = 'none';
@@ -602,61 +535,87 @@
           descCount.textContent = this.value.length;
         };
 
-        // 监听钱包连接状态变化（假设有事件或定时刷新）
-        setInterval(() => {
-          if (addModal.style.display === 'flex') updateUploadFormWalletState();
-        }, 1000);
+        // 记录上次上传时间
+        let lastUploadTime = 0;
 
-        // 上传表单提交（图片自动压缩后转base64存Firestore，限流20秒/钱包）
+        // 工具函数：压缩图片，返回 Promise<base64>
+        function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.7) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+              const img = new Image();
+              img.onload = function() {
+                let w = img.width;
+                let h = img.height;
+                // 限制最大宽高
+                if (w > maxWidth || h > maxHeight) {
+                  if (w / h > maxWidth / maxHeight) {
+                    h = Math.round(h * maxWidth / w);
+                    w = maxWidth;
+                  } else {
+                    w = Math.round(w * maxHeight / h);
+                    h = maxHeight;
+                  }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                // 压缩为jpeg，quality可调
+                const base64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(base64);
+              };
+              img.onerror = reject;
+              img.src = event.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        }
+
+        // 上传表单提交（图片自动压缩后转base64存Firestore）
         beastForm.onsubmit = async function(e) {
           e.preventDefault();
-          // 检查钱包
-          if (typeof isWalletConnected !== 'function' || !isWalletConnected()) {
-            updateUploadFormWalletState();
-            alert('请先连接钱包后再上传！');
-            return;
-          }
-          if (typeof getWalletAddress !== 'function') {
-            alert('钱包接口不可用');
-            return;
-          }
-          const wallet = getWalletAddress();
-          if (!wallet) {
-            updateUploadFormWalletState();
-            alert('请先连接钱包！');
-            return;
-          }
-          // 查询上次上传时间
-          const uploadRef = db.collection('beast_uploads').doc(wallet);
-          const lastUploadDoc = await uploadRef.get();
-          const now = Date.now();
-          if (lastUploadDoc.exists) {
-            const last = lastUploadDoc.data().lastUpload || 0;
-            if (now - last < 20000) {
-              alert('每个钱包20秒只能上传一次，请稍后再试！');
-              return;
-            }
-          }
-          // 自动压缩图片
+          if (submitBtn.disabled) return; // 防止极端情况
           const file = beastImage.files[0];
           const name = beastName.value.trim();
           const desc = beastDesc.value.trim();
           if (!file || !name || !desc) return;
-          const base64Url = await compressImage(file, 600, 600, 0.7); // 600px最大边，70%质量
-          await db.collection('beasts').add({
-            name,
-            description: desc,
-            image: base64Url,
-            wallet,
-            created: firebase.firestore.FieldValue.serverTimestamp()
-          });
-          // 记录本次上传时间
-          await uploadRef.set({ lastUpload: now });
-          addModal.style.display = 'none';
-          beastForm.reset();
-          beastPreview.style.display = 'none';
-          descCount.textContent = '0';
-          loadUserBeasts();
+          const contentHash = getContentHash(name, desc, file);
+          if (contentHash === lastContentHash) {
+            alert('请不要重复提交相同内容！');
+            return;
+          }
+          lastContentHash = contentHash;
+          const now = Date.now();
+          if (now - lastUploadTime < 20000) {
+            alert('请不要频繁上传，每20秒只能上传一次。');
+            return;
+          }
+          loading.style.display = 'block'; // 显示加载动画
+          addModal.style.display = 'none'; // 上传开始时关闭弹窗
+          submitBtn.disabled = true;
+          try {
+            // 自动压缩图片
+            const base64Url = await compressImage(file, 600, 600, 0.7); // 600px最大边，70%质量
+            await db.collection('beasts').add({
+              name,
+              description: desc,
+              image: base64Url,
+              created: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            lastUploadTime = now; // 更新时间戳
+            beastForm.reset();
+            beastPreview.style.display = 'none';
+            descCount.textContent = '0';
+            await loadUserBeasts();
+          } catch (err) {
+            alert('上传失败：' + (err.message || err));
+          } finally {
+            loading.style.display = 'none'; // 隐藏加载动画
+            submitBtn.disabled = false;
+          }
         };
 
         // 渲染用户上传的异兽（显示图片+名称+简介）
