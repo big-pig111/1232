@@ -1,363 +1,376 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <title>Meme Token Launcher - LetsBonk + Phantom</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    // 全局变量
-    let walletAdapter = null;
-    let isConnected = false;
-    let debugMode = true; // 开启调试模式
-
-    // 调试日志函数
-    function debugLog(message, data = null) {
-      if (debugMode) {
-        console.log(`[Wallet Debug] ${message}`, data || '');
+  <meta charset="UTF-8">
+  <title>角色展示页面</title>
+  <!-- Web3 钱包连接库 -->
+  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/web3@latest/dist/web3.min.js"></script>
+  <!-- Solana Web3.js -->
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <!-- 钱包管理器 -->
+  <script src="./wallet.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      font-family: "Microsoft Yahei", sans-serif;
+      background-color: #111;
+      overflow: hidden;
+    }
+    
+    /* 顶部导航栏样式 */
+    .top-navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      padding: 0 30px;
+    }
+    
+    .navbar-title {
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 500;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    
+    .navbar-right {
+      margin-left: auto;
+    }
+    
+    .connect-wallet-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+    
+    .connect-wallet-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px);
+    }
+    
+    /* 钱包弹窗样式 */
+    .wallet-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .wallet-modal.active {
+      display: flex;
+    }
+    
+    .wallet-modal-content {
+      background: rgba(17, 17, 17, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 30px;
+      width: 400px;
+      max-width: 90vw;
+      position: relative;
+      animation: modalSlideIn 0.3s ease;
+    }
+    
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
       }
     }
-
-    // 检查 Phantom 钱包是否安装
-    function isPhantomInstalled() {
-      const hasWindow = typeof window !== 'undefined';
-      const hasSolana = hasWindow && typeof window.solana !== 'undefined';
-      const isPhantom = hasSolana && window.solana.isPhantom;
-      
-      debugLog('Phantom 检查结果:', {
-        hasWindow,
-        hasSolana,
-        isPhantom,
-        solanaObject: window.solana
-      });
-      
-      return isPhantom;
+    
+    .modal-header {
+      text-align: center;
+      margin-bottom: 25px;
     }
-
-    // 更新钱包UI状态
-    function updateWalletUI() {
-      debugLog('更新UI状态', { isConnected, hasAdapter: !!walletAdapter });
-      
-      const connectBtn = document.getElementById("connectBtn");
-      const walletAddress = document.getElementById("walletAddress");
-      const mintBtn = document.querySelector("button[onclick='createToken()']");
-
-      if (!connectBtn || !walletAddress || !mintBtn) {
-        debugLog('UI元素未找到', { connectBtn: !!connectBtn, walletAddress: !!walletAddress, mintBtn: !!mintBtn });
-        return;
-      }
-
-      if (isConnected && walletAdapter && walletAdapter.publicKey) {
-        const address = walletAdapter.publicKey.toBase58();
-        const shortAddress = `${address.slice(0, 4)}...${address.slice(-4)}`;
-        
-        connectBtn.innerHTML = "🔗 断开钱包";
-        connectBtn.className = "bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700";
-        connectBtn.onclick = disconnectWallet;
-        
-        walletAddress.innerHTML = `🟢 已连接: <span class="font-mono">${shortAddress}</span>`;
-        walletAddress.className = "mt-2 text-sm text-green-600 font-medium";
-        
-        mintBtn.disabled = false;
-        mintBtn.className = "mt-6 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 font-semibold";
-      } else {
-        connectBtn.innerHTML = "🔌 连接 Phantom";
-        connectBtn.className = "bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700";
-        connectBtn.onclick = connectWallet;
-        
-        walletAddress.innerHTML = "🔴 未连接钱包";
-        walletAddress.className = "mt-2 text-sm text-red-600";
-        
-        mintBtn.disabled = true;
-        mintBtn.className = "mt-6 w-full bg-gray-400 text-white py-2 rounded cursor-not-allowed font-semibold";
-      }
+    
+    .modal-title {
+      color: #fff;
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 8px;
     }
-
-    // 连接钱包 - 简化版本
-    async function connectWallet() {
-      debugLog('开始连接钱包...');
-      
-      const connectBtn = document.getElementById("connectBtn");
-      const walletAddress = document.getElementById("walletAddress");
-
-      try {
-        // 显示连接中状态
-        if (connectBtn) {
-          connectBtn.innerHTML = "⏳ 连接中...";
-          connectBtn.disabled = true;
-        }
-        if (walletAddress) {
-          walletAddress.innerHTML = "🔄 正在连接钱包...";
-          walletAddress.className = "mt-2 text-sm text-yellow-600";
-        }
-
-        // 检查是否安装了 Phantom
-        if (!isPhantomInstalled()) {
-          debugLog('Phantom 未安装');
-          if (walletAddress) {
-            walletAddress.innerHTML = "❌ 请先安装 <a href='https://phantom.app/' target='_blank' class='text-blue-600 underline'>Phantom 钱包</a>";
-            walletAddress.className = "mt-2 text-sm text-red-600";
-          }
-          showNotification("请先安装 Phantom 钱包", "error");
-          return;
-        }
-
-        debugLog('尝试直接使用 window.solana 连接...');
-        
-        // 直接使用 window.solana 而不是适配器
-        const provider = window.solana;
-        
-        if (!provider) {
-          throw new Error('Phantom 钱包未找到');
-        }
-
-        // 连接钱包
-        const response = await provider.connect();
-        debugLog('连接响应:', response);
-        
-        isConnected = true;
-        walletAdapter = {
-          publicKey: response.publicKey || provider.publicKey,
-          disconnect: () => provider.disconnect()
-        };
-        window.wallet = walletAdapter;
-        
-        // 监听钱包断开事件
-        provider.on('disconnect', () => {
-          debugLog('钱包断开事件触发');
-          isConnected = false;
-          window.wallet = null;
-          walletAdapter = null;
-          updateWalletUI();
-        });
-
-        updateWalletUI();
-        showNotification("钱包连接成功！", "success");
-        debugLog('钱包连接成功');
-
-      } catch (error) {
-        debugLog('钱包连接失败:', error);
-        isConnected = false;
-        
-        let errorMessage = "连接失败";
-        if (error.message && error.message.includes('User rejected')) {
-          errorMessage = "用户取消连接";
-        } else if (error.code === 4001) {
-          errorMessage = "用户拒绝连接";
-        }
-        
-        if (walletAddress) {
-          walletAddress.innerHTML = `❌ ${errorMessage}`;
-          walletAddress.className = "mt-2 text-sm text-red-600";
-        }
-        
-        updateWalletUI();
-        showNotification(errorMessage, "error");
-      } finally {
-        if (connectBtn) {
-          connectBtn.disabled = false;
-        }
-      }
+    
+    .modal-subtitle {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.9rem;
     }
-
-    // 断开钱包
-    async function disconnectWallet() {
-      debugLog('断开钱包...');
-      try {
-        if (window.solana && window.solana.disconnect) {
-          await window.solana.disconnect();
-        }
-        isConnected = false;
-        window.wallet = null;
-        walletAdapter = null;
-        updateWalletUI();
-        showNotification("钱包已断开", "info");
-        debugLog('钱包断开成功');
-      } catch (error) {
-        debugLog('断开钱包失败:', error);
-        showNotification("断开钱包失败", "error");
-      }
+    
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.3s ease;
     }
-
-    // 显示通知
-    function showNotification(message, type = "info") {
-      debugLog('显示通知:', { message, type });
-      
-      const notification = document.createElement('div');
-      const bgColor = type === 'success' ? 'bg-green-500' : 
-                     type === 'error' ? 'bg-red-500' : 
-                     type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
-      
-      notification.className = `fixed top-4 right-4 ${bgColor} text-white px-4 py-2 rounded shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
-      notification.textContent = message;
-      
-      document.body.appendChild(notification);
-      
-      // 显示动画
-      setTimeout(() => {
-        notification.classList.remove('translate-x-full');
-      }, 100);
-      
-      // 3秒后移除
-      setTimeout(() => {
-        notification.classList.add('translate-x-full');
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-          }
-        }, 300);
-      }, 3000);
+    
+    .close-btn:hover {
+      color: #fff;
     }
-
-    // 测试按钮点击
-    function testClick() {
-      debugLog('测试按钮被点击');
-      alert('按钮点击正常工作!');
+    
+    .wallet-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
-
-    // 页面加载完成后初始化
-    document.addEventListener('DOMContentLoaded', function() {
-      debugLog('页面DOM加载完成');
-      
-      // 等待一段时间再初始化，确保所有资源都加载完成
-      setTimeout(() => {
-        debugLog('开始初始化钱包UI...');
-        updateWalletUI();
-        
-        // 检查钱包状态
-        if (isPhantomInstalled() && window.solana.isConnected) {
-          debugLog('检测到钱包已连接，尝试重连...');
-          connectWallet();
-        }
-        
-        debugLog('初始化完成');
-      }, 500);
-    });
-
-    // 暴露函数到全局作用域
-    window.connectWallet = connectWallet;
-    window.disconnectWallet = disconnectWallet;
-    window.updateWalletUI = updateWalletUI;
-    window.testClick = testClick;
-    window.debugLog = debugLog;
-  </script>
+    
+    .wallet-option {
+      display: flex;
+      align-items: center;
+      padding: 15px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .wallet-option:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .wallet-icon {
+      width: 32px;
+      height: 32px;
+      margin-right: 15px;
+      border-radius: 8px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .wallet-info {
+      flex: 1;
+    }
+    
+    .wallet-name {
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    
+    .wallet-desc {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.8rem;
+    }
+    
+    .wallet-category {
+      margin: 20px 0 10px 0;
+      text-align: center;
+    }
+    
+    .category-title {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 8px;
+    }
+    
+    .container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      padding-top: 60px; /* 为顶部导航栏留出空间 */
+    }
+    .panel {
+      flex: 1;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: relative;
+      transition: flex 0.5s ease, filter 0.5s ease;
+      filter: brightness(0.5) grayscale(20%);
+      cursor: pointer;
+    }
+    .panel.active {
+      flex: 5;
+      filter: brightness(1) grayscale(0%);
+      z-index: 2;
+    }
+    .overlay {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: #fff;
+      font-size: 1.5rem;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      background: rgba(0,0,0,0.4);
+      padding: 10px 20px;
+      border-radius: 8px;
+    }
+    .panel.active .overlay {
+      opacity: 1;
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-r from-purple-100 via-yellow-100 to-blue-100 min-h-screen flex items-center justify-center">
-  <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-    <h1 class="text-2xl font-bold mb-4 text-center">🚀 Launch Meme Token</h1>
-
-    <!-- 调试信息 -->
-    <div class="mb-4 p-2 bg-gray-100 rounded text-xs">
-      <div>调试模式: <span id="debugStatus">开启</span></div>
-      <div>钱包状态: <span id="walletStatus">未检查</span></div>
-      <button onclick="testClick()" class="mt-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">测试点击</button>
+<body>
+  <!-- 顶部导航栏 -->
+  <div class="top-navbar">
+    <div class="navbar-title">角色展示</div>
+    <div class="navbar-right">
+      <button class="connect-wallet-btn" id="connectWalletBtn">连接钱包</button>
     </div>
-
-    <!-- Wallet -->
-    <div class="mb-6 text-center">
-      <button id="connectBtn" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
-        🔌 连接 Phantom
-      </button>
-      <div id="walletAddress" class="mt-2 text-sm text-red-600">🔴 未连接钱包</div>
+  </div>
+  
+  <!-- 钱包连接弹窗 -->
+  <div class="wallet-modal" id="walletModal">
+    <div class="wallet-modal-content">
+      <button class="close-btn" id="closeModalBtn">&times;</button>
+      <div class="modal-header">
+        <div class="modal-title">连接钱包</div>
+        <div class="modal-subtitle">选择您要连接的钱包</div>
+      </div>
+      <div class="wallet-options">
+        <!-- Solana 钱包 -->
+        <div class="wallet-category">
+          <div class="category-title">Solana 钱包</div>
+        </div>
+        <div class="wallet-option" data-wallet="phantom">
+          <div class="wallet-icon">👻</div>
+          <div class="wallet-info">
+            <div class="wallet-name">Phantom</div>
+            <div class="wallet-desc">最受欢迎的Solana钱包</div>
+          </div>
+        </div>
+        <div class="wallet-option" data-wallet="solflare">
+          <div class="wallet-icon">☀️</div>
+          <div class="wallet-info">
+            <div class="wallet-name">Solflare</div>
+            <div class="wallet-desc">功能强大的Solana钱包</div>
+          </div>
+        </div>
+        <div class="wallet-option" data-wallet="slope">
+          <div class="wallet-icon">📈</div>
+          <div class="wallet-info">
+            <div class="wallet-name">Slope</div>
+            <div class="wallet-desc">移动优先的Solana钱包</div>
+          </div>
+        </div>
+        
+        <!-- 以太坊钱包 -->
+        <div class="wallet-category">
+          <div class="category-title">以太坊钱包</div>
+        </div>
+        <div class="wallet-option" data-wallet="metamask">
+          <div class="wallet-icon">🦊</div>
+          <div class="wallet-info">
+            <div class="wallet-name">MetaMask</div>
+            <div class="wallet-desc">最受欢迎的以太坊钱包</div>
+          </div>
+        </div>
+        <div class="wallet-option" data-wallet="walletconnect">
+          <div class="wallet-icon">🔗</div>
+          <div class="wallet-info">
+            <div class="wallet-name">WalletConnect</div>
+            <div class="wallet-desc">通过二维码连接移动钱包</div>
+          </div>
+        </div>
+        <div class="wallet-option" data-wallet="coinbase">
+          <div class="wallet-icon">🔵</div>
+          <div class="wallet-info">
+            <div class="wallet-name">Coinbase Wallet</div>
+            <div class="wallet-desc">去中心化网络的入口</div>
+          </div>
+        </div>
+        <div class="wallet-option" data-wallet="trust">
+          <div class="wallet-icon">🛡️</div>
+          <div class="wallet-info">
+            <div class="wallet-name">Trust Wallet</div>
+            <div class="wallet-desc">去中心化移动钱包</div>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <!-- Form -->
-    <div class="space-y-4">
-      <input type="text" id="name" placeholder="Token Name" class="w-full px-4 py-2 rounded border border-gray-300">
-      <input type="text" id="symbol" placeholder="Symbol (e.g. BMEME)" class="w-full px-4 py-2 rounded border border-gray-300">
-      <input type="url" id="imageUrl" placeholder="头像/Logo URL (可选)" class="w-full px-4 py-2 rounded border border-gray-300">
-      <input type="number" id="decimals" placeholder="Decimals (e.g. 6)" class="w-full px-4 py-2 rounded border border-gray-300" value="6">
-      <input type="text" id="supply" placeholder="Total Supply (e.g. 1000000000000000)" class="w-full px-4 py-2 rounded border border-gray-300">
-      <input type="text" id="buyAmount" placeholder="Initial Buy Amount" class="w-full px-4 py-2 rounded border border-gray-300">
+  </div>
+  
+  <div class="container">
+    <div class="panel active" style="background-image: url('./image1.png')">
+      <div class="overlay">麟狮幻兽</div>
     </div>
-
-    <button onclick="createToken()" class="mt-6 w-full bg-gray-400 text-white py-2 rounded cursor-not-allowed font-semibold" disabled>
-      Mint Token
-    </button>
-
-    <div id="result" class="mt-4 text-sm text-center"></div>
+    <div class="panel" style="background-image: url('./image2.png')">
+      <div class="overlay">白体鼓音驹</div>
+    </div>
+    <div class="panel" style="background-image: url('./image3.png')">
+      <div class="overlay">九尾背眸羊</div>
+    </div>
+    <div class="panel" style="background-image: url('image4.png')">
+      <div class="overlay">三眸鹊音鸮</div>
+    </div>
+    <div class="panel" style="background-image: url('image5.png')">
+      <div class="overlay">四足飞翼虺</div>
+    </div>
   </div>
 
   <script>
-    async function createToken() {
-      // 检查钱包连接状态
-      if (!window.wallet || !window.wallet.publicKey) {
-        document.getElementById("result").innerHTML = "❌ 请先连接钱包";
-        return;
-      }
-
-      const name = document.getElementById("name").value;
-      const symbol = document.getElementById("symbol").value;
-      const imageUrl = document.getElementById("imageUrl").value;
-      const decimals = parseInt(document.getElementById("decimals").value);
-      const supply = document.getElementById("supply").value;
-      const buyAmount = document.getElementById("buyAmount").value;
-
-      // 表单验证
-      if (!name || !symbol || !supply) {
-        document.getElementById("result").innerHTML = "❌ 请填写所有必填字段";
-        return;
-      }
-
-      const resultEl = document.getElementById("result");
-      resultEl.innerText = "⏳ Minting in progress...";
-
-      // 构建 payload，只有当 imageUrl 不为空时才包含
-      const payload = {
-        name,
-        symbol,
-        decimals,
-        supply,
-        buyAmount,
-        createOnly: false,
-        migrateType: "amm"
-      };
-
-      // 如果提供了头像 URL，则添加到 payload 中
-      if (imageUrl && imageUrl.trim() !== "") {
-        payload.image = imageUrl.trim();
-        // 也尝试添加其他可能的字段名
-        payload.uri = imageUrl.trim();
-        payload.logoURI = imageUrl.trim();
-      }
-
-      try {
-        const res = await fetch("https://launch.letsbonk.fun/launchpad/createMint", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
+    // 等待DOM加载完成
+    document.addEventListener('DOMContentLoaded', async function() {
+      // 面板切换功能
+      const panels = document.querySelectorAll('.panel');
+      panels.forEach(panel => {
+        panel.addEventListener('click', () => {
+          panels.forEach(p => p.classList.remove('active'));
+          panel.classList.add('active');
         });
+      });
 
-        const data = await res.json();
-
-        if (res.ok) {
-          resultEl.innerHTML = `✅ Token created!<br><pre class="text-left text-xs mt-2 bg-gray-100 p-2 rounded overflow-auto">${JSON.stringify(data, null, 2)}</pre>`;
-        } else {
-          resultEl.innerHTML = `❌ Error:<br><pre class="text-left text-xs mt-2 bg-red-100 p-2 rounded overflow-auto">${JSON.stringify(data, null, 2)}</pre>`;
-        }
-      } catch (err) {
-        resultEl.innerHTML = `❌ Exception:<br><pre class="text-left text-xs mt-2 bg-red-100 p-2 rounded overflow-auto">${err.message}</pre>`;
+      // 初始化钱包管理器
+      try {
+        await initWallet();
+        console.log('钱包管理器初始化成功');
+      } catch (error) {
+        console.error('钱包管理器初始化失败:', error);
       }
-    }
-
-    // 更新调试状态显示
-    function updateDebugStatus() {
-      const debugStatus = document.getElementById('debugStatus');
-      const walletStatus = document.getElementById('walletStatus');
-      
-      if (debugStatus) {
-        debugStatus.textContent = '开启';
-      }
-      
-      if (walletStatus) {
-        const phantom = isPhantomInstalled();
-        walletStatus.textContent = phantom ? '已安装 Phantom' : '未安装 Phantom';
-      }
-    }
-
-    // 页面加载后更新调试状态
-    setTimeout(updateDebugStatus, 1000);
+    });
   </script>
 </body>
 </html>
