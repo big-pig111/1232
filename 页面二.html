@@ -505,7 +505,12 @@
         const beastDesc = document.getElementById('beastDesc');
         const descCount = document.getElementById('descCount');
 
-        addCard.onclick = () => {
+        addCard.onclick = async () => {
+          // 检查钱包是否已连接
+          if (typeof isWalletConnected !== 'function' || !isWalletConnected()) {
+            alert('请先在页面一连接钱包！');
+            return;
+          }
           addModal.style.display = 'flex';
         };
         closeAddModal.onclick = () => {
@@ -530,33 +535,89 @@
           descCount.textContent = this.value.length;
         };
 
-        // 上传表单提交
+        // 工具函数：压缩图片，返回 Promise<base64>
+        function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.7) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+              const img = new Image();
+              img.onload = function() {
+                let w = img.width;
+                let h = img.height;
+                // 限制最大宽高
+                if (w > maxWidth || h > maxHeight) {
+                  if (w / h > maxWidth / maxHeight) {
+                    h = Math.round(h * maxWidth / w);
+                    w = maxWidth;
+                  } else {
+                    w = Math.round(w * maxHeight / h);
+                    h = maxHeight;
+                  }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                // 压缩为jpeg，quality可调
+                const base64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(base64);
+              };
+              img.onerror = reject;
+              img.src = event.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        }
+
+        // 上传表单提交（图片自动压缩后转base64存Firestore，限流20秒/钱包）
         beastForm.onsubmit = async function(e) {
           e.preventDefault();
+          // 检查钱包
+          if (typeof getWalletAddress !== 'function') {
+            alert('钱包接口不可用');
+            return;
+          }
+          const wallet = getWalletAddress();
+          if (!wallet) {
+            alert('请先连接钱包！');
+            return;
+          }
+          // 查询上次上传时间
+          const uploadRef = db.collection('beast_uploads').doc(wallet);
+          const lastUploadDoc = await uploadRef.get();
+          const now = Date.now();
+          if (lastUploadDoc.exists) {
+            const last = lastUploadDoc.data().lastUpload || 0;
+            if (now - last < 20000) {
+              alert('每个钱包20秒只能上传一次，请稍后再试！');
+              return;
+            }
+          }
+          // 自动压缩图片
           const file = beastImage.files[0];
           const name = beastName.value.trim();
           const desc = beastDesc.value.trim();
           if (!file || !name || !desc) return;
-          // 上传图片到Storage
-          const storageRef = storage.ref('beasts/' + Date.now() + '_' + file.name);
-          const snapshot = await storageRef.put(file);
-          const url = await snapshot.ref.getDownloadURL();
-          // 写入Firestore
+          const base64Url = await compressImage(file, 600, 600, 0.7); // 600px最大边，70%质量
           await db.collection('beasts').add({
             name,
             description: desc,
-            image: url,
+            image: base64Url,
+            wallet,
             created: firebase.firestore.FieldValue.serverTimestamp()
           });
+          // 记录本次上传时间
+          await uploadRef.set({ lastUpload: now });
           addModal.style.display = 'none';
           beastForm.reset();
           beastPreview.style.display = 'none';
           descCount.textContent = '0';
-          // 重新加载用户上传内容
           loadUserBeasts();
         };
 
-        // 渲染用户上传的异兽
+        // 渲染用户上传的异兽（显示图片+名称+简介）
         async function loadUserBeasts() {
           const gallery = document.getElementById('gallery-container');
           // 移除旧的用户上传卡片
