@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山海经百科 - 开发路线图</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2c3e50',
+                        secondary: '#8b7d6b',
+                        accent: '#d4c8b0',
+                        neutral: '#f9f6f0',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        serif: ['Noto Serif SC', 'SimSun', 'serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .timeline-line {
+                @apply absolute top-0 bottom-0 left-6 w-0.5 bg-secondary/30;
+            }
+            .timeline-dot {
+                @apply absolute left-4 w-5 h-5 rounded-full border-4 bg-white z-10;
+            }
+            .timeline-card {
+                @apply ml-14 mb-8 p-6 rounded-xl shadow-lg bg-white transition-all duration-300 hover:shadow-xl;
+            }
+            .animate-float {
+                animation: float 3s ease-in-out infinite;
+            }
+            @keyframes float {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+                100% { transform: translateY(0px); }
+            }
+        }
+        @keyframes slideInDown {
+            0% { transform: translateY(-100vh); opacity: 0.7; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        body.slide-in-down {
+            animation: slideInDown 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-neutral text-gray-800 min-h-screen slide-in-down">
+    <!-- 页面指示器 -->
+    <div class="page-indicator" style="position: fixed; right: 30px; top: 50%; transform: translateY(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 15px;">
+        <div class="indicator-dot" style="width: 12px; height: 12px; border-radius: 50%; background: rgba(60,60,60,0.3); border: 2px solid rgba(60,60,60,0.6); margin-bottom: 10px;"></div>
+        <div class="indicator-dot" style="width: 12px; height: 12px; border-radius: 50%; background: rgba(60,60,60,0.3); border: 2px solid rgba(60,60,60,0.6); margin-bottom: 10px;"></div>
+        <div class="indicator-dot active" style="width: 12px; height: 12px; border-radius: 50%; background: #FFD600; border: 2px solid #FFD600;"></div>
+    </div>
+    <!-- 移除导航栏和主横幅 -->
+
+    <!-- 路线图部分 -->
+    <section class="py-16 bg-neutral">
+        <div class="container mx-auto px-4">
+            <div class="max-w-3xl mx-auto text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">未来更新计划</h2>
+                <p class="text-lg text-gray-600">我们正在不断努力扩展山海经百科的功能，以下是我们的开发路线图</p>
+            </div>
+
+            <div class="relative">
+                <!-- 时间线 -->
+                <div class="timeline-line"></div>
+
+                <!-- 当前阶段 -->
+                <div class="timeline-card bg-primary/5 border-l-4 border-primary">
+                    <div class="timeline-dot border-primary bg-primary/20"></div>
+                    <div>
+                        <span class="inline-block px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full mb-3">
+                            当前阶段
+                        </span>
+                        <h3 class="text-xl font-bold mb-2">第一阶段：基础功能完善</h3>
+                        <p class="text-gray-600 mb-4">目前网站已上线基础搜索和展示功能，正在进行内容优化和性能提升</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">异兽搜索</span>
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">图片展示</span>
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">基础描述</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <i class="fa fa-calendar-o mr-1"></i>
+                            <span>已完成 - 2023年Q4</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 阶段2 -->
+                <div class="timeline-card bg-secondary/5 border-l-4 border-secondary">
+                    <div class="timeline-dot border-secondary bg-secondary/20"></div>
+                    <div>
+                        <span class="inline-block px-3 py-1 bg-secondary/10 text-secondary text-sm font-medium rounded-full mb-3">
+                            下一阶段
+                        </span>
+                        <h3 class="text-xl font-bold mb-2">第二阶段：用户生成内容</h3>
+                        <p class="text-gray-600 mb-4">用户将能够上传自己收藏的山海经异兽图片，并添加详细描述和来源</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="px-2 py-1 bg-secondary/10 text-secondary text-sm rounded-full">用户上传</span>
+                            <span class="px-2 py-1 bg-secondary/10 text-secondary text-sm rounded-full">图片审核</span>
+                            <span class="px-2 py-1 bg-secondary/10 text-secondary text-sm rounded-full">社区点赞</span>
+                            <span class="px-2 py-1 bg-secondary/10 text-secondary text-sm rounded-full">异兽投票</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <i class="fa fa-calendar-o mr-1"></i>
+                            <span>预计完成 - 一周之内</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 阶段3 -->
+                <div class="timeline-card bg-accent/5 border-l-4 border-accent">
+                    <div class="timeline-dot border-accent bg-accent/20"></div>
+                    <div>
+                        <span class="inline-block px-3 py-1 bg-accent/10 text-accent text-sm font-medium rounded-full mb-3">
+                            规划中
+                        </span>
+                        <h3 class="text-xl font-bold mb-2">第三阶段：社区激励计划</h3>
+                        <p class="text-gray-600 mb-4">为活跃贡献者提供特殊奖励，包括数字藏品空投和专属称号</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="px-2 py-1 bg-accent/10 text-accent text-sm rounded-full">贡献排名</span>
+                            <span class="px-2 py-1 bg-accent/10 text-accent text-sm rounded-full">数字藏品</span>
+                            <span class="px-2 py-1 bg-accent/10 text-accent text-sm rounded-full">社区徽章</span>
+                            <span class="px-2 py-1 bg-accent/10 text-accent text-sm rounded-full">定期空投</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <i class="fa fa-calendar-o mr-1"></i>
+                            <span>预计完成 - 一周之内</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 阶段4 -->
+                <div class="timeline-card bg-blue-50 border-l-4 border-blue-500">
+                    <div class="timeline-dot border-blue-500 bg-blue-100"></div>
+                    <div>
+                        <span class="inline-block px-3 py-1 bg-blue-100 text-blue-600 text-sm font-medium rounded-full mb-3">
+                            远景规划
+                        </span>
+                        <h3 class="text-xl font-bold mb-2">第四阶段：AI生成异兽</h3>
+                        <p class="text-gray-600 mb-4">集成AI技术，让用户可以根据自己的想象创造独特的山海经异兽</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="px-2 py-1 bg-blue-100 text-blue-600 text-sm rounded-full">AI生成</span>
+                            <span class="px-2 py-1 bg-blue-100 text-blue-600 text-sm rounded-full">特征组合</span>
+                            <span class="px-2 py-1 bg-blue-100 text-blue-600 text-sm rounded-full">故事生成</span>
+                            <span class="px-2 py-1 bg-blue-100 text-blue-600 text-sm rounded-full">社区分享</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <i class="fa fa-calendar-o mr-1"></i>
+                            <span>预计完成 - 十天之内</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 删除以下所有底部内容，包括加入社区、订阅、footer等 -->
+
+    <script>
+        // 导航栏滚动效果
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 50) {
+                nav.classList.add('py-2');
+                nav.classList.remove('py-3');
+            } else {
+                nav.classList.add('py-3');
+                nav.classList.remove('py-2');
+            }
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // 页面三返回页面二的丝滑切换
+        function smoothBackToPageTwo() {
+          document.body.classList.add('slide-out-down');
+          setTimeout(() => {
+            window.location.href = '页面二.html';
+          }, 500);
+        }
+        // 仅在页面三滚动到最顶部时允许返回
+        function isScrollAtTop() {
+          return window.scrollY === 0;
+        }
+        // 鼠标滚轮向上返回页面二
+        document.addEventListener('wheel', function(e) {
+          if (e.deltaY < 0 && isScrollAtTop()) {
+            smoothBackToPageTwo();
+          }
+        });
+        // 触摸上滑返回页面二
+        let startY = 0;
+        document.addEventListener('touchstart', function(e) {
+          startY = e.touches[0].clientY;
+        }, { passive: true });
+        document.addEventListener('touchend', function(e) {
+          let endY = e.changedTouches[0].clientY;
+          if (startY - endY > 50 && isScrollAtTop()) {
+            smoothBackToPageTwo();
+          }
+        }, { passive: true });
+
+        window.addEventListener('DOMContentLoaded', function() {
+          setTimeout(() => {
+            document.body.classList.remove('slide-in-down');
+          }, 500);
+        });
+    </script>
+</body>
+</html>
