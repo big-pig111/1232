@@ -5,30 +5,22 @@
 
 class WalletManager {
   constructor() {
-    // 以太坊相关
-    this.web3 = null;
-    this.walletConnectProvider = null;
-    
     // Solana相关
     this.solanaConnection = null;
     this.solanaWallet = null;
     
     // 通用状态
     this.currentAccount = null;
-    this.currentChain = null; // 'ethereum' 或 'solana'
+    this.currentChain = 'solana'; // 只支持Solana
     this.isConnected = false;
     
     // 钱包名称映射
     this.walletNames = {
       // Solana钱包
       'phantom': 'Phantom',
+      'okx': 'OKX Wallet',
       'solflare': 'Solflare',
-      'slope': 'Slope',
-      // 以太坊钱包
-      'metamask': 'MetaMask',
-      'walletconnect': 'WalletConnect',
-      'coinbase': 'Coinbase Wallet',
-      'trust': 'Trust Wallet'
+      'slope': 'Slope'
     };
     
     // Solana RPC 端点
@@ -100,18 +92,20 @@ class WalletManager {
       }
     }
 
-    // 检查以太坊钱包连接状态
-    if (typeof window.ethereum !== 'undefined') {
+    // 检查 OKX 钱包连接状态
+    if (typeof window.okxwallet !== 'undefined' && window.okxwallet.solana) {
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
-          this.currentAccount = accounts[0];
-          this.currentChain = 'ethereum';
+        if (window.okxwallet.solana.isConnected) {
+          this.currentAccount = window.okxwallet.solana.publicKey.toString();
+          this.currentChain = 'solana';
+          this.solanaWallet = window.okxwallet.solana;
           this.isConnected = true;
+          this.solanaConnection = new solanaWeb3.Connection(this.solanaRpcUrl, 'confirmed');
           this.updateConnectedStatus(this.currentAccount);
+          return;
         }
       } catch (error) {
-        console.log('检查以太坊连接状态时出错:', error);
+        console.log('检查OKX连接状态时出错:', error);
       }
     }
   }
@@ -142,24 +136,14 @@ class WalletManager {
         case 'phantom':
           await this.connectPhantom();
           break;
+        case 'okx':
+          await this.connectOKX();
+          break;
         case 'solflare':
           await this.connectSolflare();
           break;
         case 'slope':
           await this.connectSlope();
-          break;
-        // 以太坊钱包
-        case 'metamask':
-          await this.connectMetaMask();
-          break;
-        case 'walletconnect':
-          await this.connectWalletConnect();
-          break;
-        case 'coinbase':
-          await this.connectCoinbase();
-          break;
-        case 'trust':
-          await this.connectTrust();
           break;
         default:
           throw new Error('不支持的钱包类型');
@@ -171,29 +155,43 @@ class WalletManager {
     }
   }
 
-  // MetaMask 连接
-  async connectMetaMask() {
-    if (typeof window.ethereum === 'undefined') {
-      throw new Error('请先安装 MetaMask 钱包');
+  // OKX 钱包连接
+  async connectOKX() {
+    if (typeof window.okxwallet === 'undefined' || !window.okxwallet.solana) {
+      throw new Error('请先安装 OKX 钱包');
     }
 
     try {
-      // 请求连接
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-
-      if (accounts.length === 0) {
-        throw new Error('没有找到账户');
+      // 连接到OKX Solana钱包
+      const response = await window.okxwallet.solana.connect();
+      
+      if (!response.publicKey) {
+        throw new Error('连接失败，未获取到公钥');
       }
 
-      this.currentAccount = accounts[0];
-      this.web3 = new Web3(window.ethereum);
+      this.currentAccount = response.publicKey.toString();
+      this.currentChain = 'solana';
+      this.solanaWallet = window.okxwallet.solana;
       this.isConnected = true;
 
+      // 初始化Solana连接
+      this.solanaConnection = new solanaWeb3.Connection(this.solanaRpcUrl, 'confirmed');
+
+      // 监听断开连接
+      window.okxwallet.solana.on('disconnect', () => {
+        console.log('OKX 已断开连接');
+        this.resetConnection();
+      });
+
       // 监听账户变化
-      window.ethereum.on('accountsChanged', (accounts) => this.handleAccountsChanged(accounts));
-      window.ethereum.on('chainChanged', (chainId) => this.handleChainChanged(chainId));
+      window.okxwallet.solana.on('accountChanged', (publicKey) => {
+        if (publicKey) {
+          this.currentAccount = publicKey.toString();
+          this.updateConnectedStatus(this.currentAccount);
+        } else {
+          this.resetConnection();
+        }
+      });
 
       this.updateConnectedStatus(this.currentAccount);
       
@@ -205,56 +203,7 @@ class WalletManager {
     }
   }
 
-  // WalletConnect 连接
-  async connectWalletConnect() {
-    try {
-      // 创建 WalletConnect Provider
-      this.walletConnectProvider = new WalletConnectProvider.default({
-        infuraId: "your-infura-id", // 请替换为你的 Infura ID
-      });
 
-      // 启用会话
-      await this.walletConnectProvider.enable();
-      
-      this.web3 = new Web3(this.walletConnectProvider);
-      const accounts = await this.web3.eth.getAccounts();
-      
-      if (accounts.length === 0) {
-        throw new Error('没有找到账户');
-      }
-
-      this.currentAccount = accounts[0];
-      this.isConnected = true;
-      this.updateConnectedStatus(this.currentAccount);
-
-      // 监听断开连接
-      this.walletConnectProvider.on("disconnect", (code, reason) => {
-        console.log('WalletConnect 已断开:', code, reason);
-        this.resetConnection();
-      });
-
-    } catch (error) {
-      throw new Error('WalletConnect 连接失败: ' + error.message);
-    }
-  }
-
-  // Coinbase Wallet 连接
-  async connectCoinbase() {
-    if (typeof window.ethereum !== 'undefined' && window.ethereum.isCoinbaseWallet) {
-      await this.connectMetaMask(); // 使用相同的以太坊接口
-    } else {
-      throw new Error('请先安装 Coinbase Wallet');
-    }
-  }
-
-  // Trust Wallet 连接
-  async connectTrust() {
-    if (typeof window.ethereum !== 'undefined' && window.ethereum.isTrust) {
-      await this.connectMetaMask(); // 使用相同的以太坊接口
-    } else {
-      throw new Error('请先安装 Trust Wallet');
-    }
-  }
 
   // Phantom 钱包连接
   async connectPhantom() {
@@ -360,22 +309,7 @@ class WalletManager {
     }
   }
 
-  // 处理账户变化
-  handleAccountsChanged(accounts) {
-    if (accounts.length === 0) {
-      this.resetConnection();
-    } else {
-      this.currentAccount = accounts[0];
-      this.updateConnectedStatus(this.currentAccount);
-    }
-  }
 
-  // 处理链变化
-  handleChainChanged(chainId) {
-    console.log('链已切换到:', chainId);
-    // 页面重新加载以确保状态一致
-    window.location.reload();
-  }
 
   // 更新连接状态
   updateConnectedStatus(account) {
@@ -420,8 +354,7 @@ class WalletManager {
   // 重置连接
   resetConnection() {
     this.currentAccount = null;
-    this.currentChain = null;
-    this.web3 = null;
+    this.currentChain = 'solana';
     this.solanaConnection = null;
     this.solanaWallet = null;
     this.isConnected = false;
@@ -431,16 +364,10 @@ class WalletManager {
   // 断开钱包连接
   async disconnectWallet() {
     try {
-      if (this.currentChain === 'solana' && this.solanaWallet) {
+      if (this.solanaWallet) {
         // 断开Solana钱包连接
         if (this.solanaWallet.disconnect) {
           await this.solanaWallet.disconnect();
-        }
-      } else if (this.currentChain === 'ethereum') {
-        // 断开以太坊钱包连接
-        if (this.walletConnectProvider) {
-          await this.walletConnectProvider.disconnect();
-          this.walletConnectProvider = null;
         }
       }
       
@@ -466,7 +393,7 @@ class WalletManager {
 
   // 获取账户余额
   async getAccountBalance() {
-    if (this.currentChain === 'solana' && this.solanaConnection && this.currentAccount) {
+    if (this.solanaConnection && this.currentAccount) {
       try {
         const publicKey = new solanaWeb3.PublicKey(this.currentAccount);
         const balance = await this.solanaConnection.getBalance(publicKey);
@@ -474,13 +401,6 @@ class WalletManager {
         return (balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(6);
       } catch (error) {
         console.error('获取SOL余额失败:', error);
-      }
-    } else if (this.currentChain === 'ethereum' && this.web3 && this.currentAccount) {
-      try {
-        const balance = await this.web3.eth.getBalance(this.currentAccount);
-        return this.web3.utils.fromWei(balance, 'ether');
-      } catch (error) {
-        console.error('获取ETH余额失败:', error);
       }
     }
     return null;
@@ -492,22 +412,11 @@ class WalletManager {
   }
 
   // 发送交易
-  async sendTransaction(to, value, data = null) {
+  async sendTransaction(to, value) {
     if (!this.isConnected || !this.currentAccount) {
       throw new Error('请先连接钱包');
     }
 
-    if (this.currentChain === 'solana') {
-      return await this.sendSolanaTransaction(to, value);
-    } else if (this.currentChain === 'ethereum') {
-      return await this.sendEthereumTransaction(to, value, data || '0x');
-    } else {
-      throw new Error('不支持的区块链网络');
-    }
-  }
-
-  // 发送Solana交易
-  async sendSolanaTransaction(to, value) {
     if (!this.solanaConnection || !this.solanaWallet) {
       throw new Error('Solana钱包未连接');
     }
@@ -538,45 +447,12 @@ class WalletManager {
     }
   }
 
-  // 发送以太坊交易
-  async sendEthereumTransaction(to, value, data) {
-    if (!this.web3 || !this.currentAccount) {
-      throw new Error('以太坊钱包未连接');
-    }
-
-    try {
-      const txParams = {
-        from: this.currentAccount,
-        to: to,
-        value: this.web3.utils.toWei(value.toString(), 'ether'),
-        data: data
-      };
-
-      const txHash = await this.web3.eth.sendTransaction(txParams);
-      return txHash;
-    } catch (error) {
-      console.error('发送ETH交易失败:', error);
-      throw error;
-    }
-  }
-
   // 签名消息
   async signMessage(message) {
     if (!this.isConnected || !this.currentAccount) {
       throw new Error('请先连接钱包');
     }
 
-    if (this.currentChain === 'solana') {
-      return await this.signSolanaMessage(message);
-    } else if (this.currentChain === 'ethereum') {
-      return await this.signEthereumMessage(message);
-    } else {
-      throw new Error('不支持的区块链网络');
-    }
-  }
-
-  // Solana消息签名
-  async signSolanaMessage(message) {
     if (!this.solanaWallet) {
       throw new Error('Solana钱包未连接');
     }
@@ -587,21 +463,6 @@ class WalletManager {
       return signedMessage.signature;
     } catch (error) {
       console.error('SOL消息签名失败:', error);
-      throw error;
-    }
-  }
-
-  // 以太坊消息签名
-  async signEthereumMessage(message) {
-    if (!this.web3 || !this.currentAccount) {
-      throw new Error('以太坊钱包未连接');
-    }
-
-    try {
-      const signature = await this.web3.eth.personal.sign(message, this.currentAccount);
-      return signature;
-    } catch (error) {
-      console.error('ETH消息签名失败:', error);
       throw error;
     }
   }
@@ -618,12 +479,11 @@ class WalletManager {
 
   // 获取当前钱包类型
   getCurrentWalletType() {
-    if (this.currentChain === 'solana' && this.solanaWallet) {
+    if (this.solanaWallet) {
       if (this.solanaWallet.isPhantom) return 'phantom';
       if (this.solanaWallet.isSolflare) return 'solflare';
+      if (this.solanaWallet.isOKXWallet) return 'okx';
       return 'solana';
-    } else if (this.currentChain === 'ethereum') {
-      return 'ethereum';
     }
     return null;
   }
