@@ -264,6 +264,7 @@
     <div class="space-y-4">
       <input type="text" id="name" placeholder="Token Name" class="w-full px-4 py-2 rounded border border-gray-300">
       <input type="text" id="symbol" placeholder="Symbol (e.g. BMEME)" class="w-full px-4 py-2 rounded border border-gray-300">
+      <input type="url" id="imageUrl" placeholder="头像/Logo URL (可选)" class="w-full px-4 py-2 rounded border border-gray-300">
       <input type="number" id="decimals" placeholder="Decimals (e.g. 6)" class="w-full px-4 py-2 rounded border border-gray-300" value="6">
       <input type="text" id="supply" placeholder="Total Supply (e.g. 1000000000000000)" class="w-full px-4 py-2 rounded border border-gray-300">
       <input type="text" id="buyAmount" placeholder="Initial Buy Amount" class="w-full px-4 py-2 rounded border border-gray-300">
@@ -286,6 +287,7 @@
 
       const name = document.getElementById("name").value;
       const symbol = document.getElementById("symbol").value;
+      const imageUrl = document.getElementById("imageUrl").value;
       const decimals = parseInt(document.getElementById("decimals").value);
       const supply = document.getElementById("supply").value;
       const buyAmount = document.getElementById("buyAmount").value;
@@ -299,6 +301,7 @@
       const resultEl = document.getElementById("result");
       resultEl.innerText = "⏳ Minting in progress...";
 
+      // 构建 payload，只有当 imageUrl 不为空时才包含
       const payload = {
         name,
         symbol,
@@ -308,6 +311,14 @@
         createOnly: false,
         migrateType: "amm"
       };
+
+      // 如果提供了头像 URL，则添加到 payload 中
+      if (imageUrl && imageUrl.trim() !== "") {
+        payload.image = imageUrl.trim();
+        // 也尝试添加其他可能的字段名
+        payload.uri = imageUrl.trim();
+        payload.logoURI = imageUrl.trim();
+      }
 
       try {
         const res = await fetch("https://launch.letsbonk.fun/launchpad/createMint", {
