@@ -243,9 +243,34 @@
 
     <!-- 图片画廊 -->
     <div class="gallery" id="gallery-container">
-        <!-- 图片将通过JS动态生成 -->
+        <!-- 添加异兽卡片 -->
+        <div class="gallery-item add-card" id="addCard" style="display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
+          <div style="display:flex;align-items:center;justify-content:center;height:220px;width:100%;font-size:4rem;color:#d4c8b0;">
+            +
+          </div>
+          <div style="text-align:center;color:#8b7d6b;font-size:1.1rem;margin-top:1rem;">添加异兽</div>
+        </div>
+        <!-- 用户上传的异兽卡片将插入这里 -->
     </div>
-
+    <!-- 上传弹窗 -->
+    <div id="addModal" style="display:none;position:fixed;z-index:9999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:2rem 2.5rem;border-radius:16px;max-width:90vw;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;">
+        <button id="closeAddModal" style="position:absolute;top:10px;right:16px;font-size:1.5rem;background:none;border:none;cursor:pointer;">×</button>
+        <h3 style="margin-bottom:1rem;">上传你的异兽</h3>
+        <form id="beastForm">
+          <input type="file" id="beastImage" accept="image/*" required style="margin-bottom:1rem;"><br>
+          <img id="beastPreview" style="max-width:200px;max-height:120px;display:none;margin-bottom:1rem;"><br>
+          <input type="text" id="beastName" placeholder="异兽名称" maxlength="20" required style="width:100%;margin-bottom:1rem;padding:0.5rem;"><br>
+          <textarea id="beastDesc" placeholder="简介（100字以内）" maxlength="100" required style="width:100%;height:60px;margin-bottom:0.5rem;padding:0.5rem;"></textarea>
+          <div style="font-size:0.9rem;color:#888;margin-bottom:1rem;"><span id="descCount">0</span>/100</div>
+          <button type="submit" style="background:#8b7d6b;color:#fff;padding:0.6rem 2rem;border:none;border-radius:8px;cursor:pointer;">提交</button>
+        </form>
+      </div>
+    </div>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script>
         // 山海经异兽数据（包含名称、描述和图片）
         const shanhaiData = [
@@ -306,14 +331,28 @@
         function renderCreatures(creatures) {
             galleryContainer.innerHTML = '';
 
+            // 先插入加号卡片
+            galleryContainer.innerHTML += `
+                <div class="gallery-item add-card" id="addCard" style="display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
+                  <div style="display:flex;align-items:center;justify-content:center;height:220px;width:100%;font-size:4rem;color:#d4c8b0;">
+                    +
+                  </div>
+                  <div style="text-align:center;color:#8b7d6b;font-size:1.1rem;margin-top:1rem;">添加异兽</div>
+                </div>
+            `;
+
             if (creatures.length === 0) {
-                galleryContainer.innerHTML = `
+                galleryContainer.innerHTML += `
                     <div class="empty-state">
                         <i>🔍</i>
                         <h3>未找到相关异兽</h3>
                         <p>请尝试其他关键词或特征描述</p>
                     </div>
                 `;
+                // 绑定加号卡片点击事件
+                document.getElementById('addCard').onclick = () => {
+                    document.getElementById('addModal').style.display = 'flex';
+                };
                 return;
             }
 
@@ -329,6 +368,11 @@
                 `;
                 galleryContainer.appendChild(card);
             });
+
+            // 重新绑定加号卡片的点击事件
+            document.getElementById('addCard').onclick = () => {
+                document.getElementById('addModal').style.display = 'flex';
+            };
         }
 
         // 搜索功能
@@ -434,6 +478,106 @@
                 smoothBackToHome();
             }
         }, { passive: true });
+
+        // Firebase配置
+        const firebaseConfig = {
+          apiKey: "AIzaSyA5Z5ieEbAcfQX0kxGSn9ldGXhzvAwx_8M",
+          authDomain: "chat-294cc.firebaseapp.com",
+          databaseURL: "https://chat-294cc-default-rtdb.firebaseio.com",
+          projectId: "chat-294cc",
+          storageBucket: "chat-294cc.appspot.com",
+          messagingSenderId: "913615304269",
+          appId: "1:913615304269:web:0274ffaccb8e6b678e4e04",
+          measurementId: "G-SJR9NDW86B"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // 上传弹窗逻辑
+        const addCard = document.getElementById('addCard');
+        const addModal = document.getElementById('addModal');
+        const closeAddModal = document.getElementById('closeAddModal');
+        const beastForm = document.getElementById('beastForm');
+        const beastImage = document.getElementById('beastImage');
+        const beastPreview = document.getElementById('beastPreview');
+        const beastName = document.getElementById('beastName');
+        const beastDesc = document.getElementById('beastDesc');
+        const descCount = document.getElementById('descCount');
+
+        addCard.onclick = () => {
+          addModal.style.display = 'flex';
+        };
+        closeAddModal.onclick = () => {
+          addModal.style.display = 'none';
+          beastForm.reset();
+          beastPreview.style.display = 'none';
+          descCount.textContent = '0';
+        };
+        beastImage.onchange = function() {
+          if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+              beastPreview.src = e.target.result;
+              beastPreview.style.display = 'block';
+            };
+            reader.readAsDataURL(this.files[0]);
+          } else {
+            beastPreview.style.display = 'none';
+          }
+        };
+        beastDesc.oninput = function() {
+          descCount.textContent = this.value.length;
+        };
+
+        // 上传表单提交
+        beastForm.onsubmit = async function(e) {
+          e.preventDefault();
+          const file = beastImage.files[0];
+          const name = beastName.value.trim();
+          const desc = beastDesc.value.trim();
+          if (!file || !name || !desc) return;
+          // 上传图片到Storage
+          const storageRef = storage.ref('beasts/' + Date.now() + '_' + file.name);
+          const snapshot = await storageRef.put(file);
+          const url = await snapshot.ref.getDownloadURL();
+          // 写入Firestore
+          await db.collection('beasts').add({
+            name,
+            description: desc,
+            image: url,
+            created: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          addModal.style.display = 'none';
+          beastForm.reset();
+          beastPreview.style.display = 'none';
+          descCount.textContent = '0';
+          // 重新加载用户上传内容
+          loadUserBeasts();
+        };
+
+        // 渲染用户上传的异兽
+        async function loadUserBeasts() {
+          const gallery = document.getElementById('gallery-container');
+          // 移除旧的用户上传卡片
+          Array.from(gallery.querySelectorAll('.user-beast')).forEach(e=>e.remove());
+          // 拉取数据
+          const snap = await db.collection('beasts').orderBy('created','desc').get();
+          snap.forEach(doc => {
+            const data = doc.data();
+            const card = document.createElement('div');
+            card.className = 'gallery-item user-beast';
+            card.innerHTML = `
+              <img src="${data.image}" alt="${data.name}" class="creature-img">
+              <div class="creature-info">
+                <h3 class="creature-name">${data.name}</h3>
+                <p class="creature-desc">${data.description}</p>
+              </div>
+            `;
+            gallery.insertBefore(card, gallery.children[1]); // 插在加号后面
+          });
+        }
+        window.addEventListener('DOMContentLoaded', loadUserBeasts);
     </script>
 </body>
 </html>
