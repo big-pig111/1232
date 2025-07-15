@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>角色展示页面</title>
-  <!-- Web3 钱包连接库 -->
-  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/web3@latest/dist/web3.min.js"></script>
   <!-- Solana Web3.js -->
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
   <!-- 钱包管理器 -->
@@ -282,6 +279,13 @@
             <div class="wallet-desc">最受欢迎的Solana钱包</div>
           </div>
         </div>
+        <div class="wallet-option" data-wallet="okx">
+          <div class="wallet-icon">🟨</div>
+          <div class="wallet-info">
+            <div class="wallet-name">OKX Wallet</div>
+            <div class="wallet-desc">多链去中心化钱包</div>
+          </div>
+        </div>
         <div class="wallet-option" data-wallet="solflare">
           <div class="wallet-icon">☀️</div>
           <div class="wallet-info">
@@ -294,39 +298,6 @@
           <div class="wallet-info">
             <div class="wallet-name">Slope</div>
             <div class="wallet-desc">移动优先的Solana钱包</div>
-          </div>
-        </div>
-        
-        <!-- 以太坊钱包 -->
-        <div class="wallet-category">
-          <div class="category-title">以太坊钱包</div>
-        </div>
-        <div class="wallet-option" data-wallet="metamask">
-          <div class="wallet-icon">🦊</div>
-          <div class="wallet-info">
-            <div class="wallet-name">MetaMask</div>
-            <div class="wallet-desc">最受欢迎的以太坊钱包</div>
-          </div>
-        </div>
-        <div class="wallet-option" data-wallet="walletconnect">
-          <div class="wallet-icon">🔗</div>
-          <div class="wallet-info">
-            <div class="wallet-name">WalletConnect</div>
-            <div class="wallet-desc">通过二维码连接移动钱包</div>
-          </div>
-        </div>
-        <div class="wallet-option" data-wallet="coinbase">
-          <div class="wallet-icon">🔵</div>
-          <div class="wallet-info">
-            <div class="wallet-name">Coinbase Wallet</div>
-            <div class="wallet-desc">去中心化网络的入口</div>
-          </div>
-        </div>
-        <div class="wallet-option" data-wallet="trust">
-          <div class="wallet-icon">🛡️</div>
-          <div class="wallet-info">
-            <div class="wallet-name">Trust Wallet</div>
-            <div class="wallet-desc">去中心化移动钱包</div>
           </div>
         </div>
       </div>
