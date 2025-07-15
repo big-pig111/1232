@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>角色展示页面</title>
+  <!-- Solana Web3.js -->
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <!-- 钱包管理器 -->
+  <script src="./wallet.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      font-family: "Microsoft Yahei", sans-serif;
+      background-color: #111;
+      overflow: hidden;
+    }
+
+    /* 全屏滚动容器 */
+    .scroll-container {
+      position: relative;
+      height: 100vh;
+      transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      will-change: transform;
+      opacity: 0;
+      animation: fadeIn 0.5s ease-in-out 0.2s forwards;
+      -webkit-transform: translateZ(0);
+      -moz-transform: translateZ(0);
+      -ms-transform: translateZ(0);
+      -o-transform: translateZ(0);
+      transform: translateZ(0);
+    }
+
+    /* 页面样式 */
+    .page {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      backface-visibility: hidden;
+      transform: translateZ(0);
+    }
+
+    .page-1 {
+      background-color: #111;
+    }
+
+    .page-2 {
+      background: #fff;
+    }
+
+    /* 页面指示器 */
+    .page-indicator {
+      position: fixed;
+      right: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .indicator-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .indicator-dot.active {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(255, 255, 255, 1);
+      transform: scale(1.2);
+    }
+
+    .indicator-dot:hover {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    /* 防止页面被选中 */
+    .page {
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      overflow: hidden;
+    }
+
+    /* 平滑滚动时隐藏滚动条 */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+
+
+
+    /* 页面切换时的状态 */
+    .page-transitioning {
+      pointer-events: none;
+    }
+
+    .page-transitioning .page-indicator {
+      pointer-events: auto;
+    }
+
+    /* 性能优化 */
+    * {
+      -webkit-backface-visibility: hidden;
+      -moz-backface-visibility: hidden;
+      -ms-backface-visibility: hidden;
+      backface-visibility: hidden;
+    }
+
+    /* 页面加载动画 */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(0); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* 页面加载完成状态 */
+    body.loaded .scroll-container {
+      animation-delay: 0s;
+    }
+    
+    /* 确保滚动流畅 */
+    body {
+      touch-action: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* 页面隐藏时暂停动画 */
+    body.page-hidden * {
+      animation-play-state: paused !important;
+      transition: none !important;
+    }
+    
+    /* 加载指示器 */
+    .loading-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(17, 17, 17, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 1;
+      transition: opacity 0.5s ease-out;
+    }
+    
+    .loading-indicator.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    .loading-text {
+      color: #fff;
+      font-size: 1rem;
+      opacity: 0.8;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .page-indicator {
+        right: 20px;
+        gap: 12px;
+      }
+      
+      .indicator-dot {
+        width: 10px;
+        height: 10px;
+      }
+      
+
+    }
+    
+    /* 顶部导航栏样式 */
+    .top-navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      padding: 0 30px;
+    }
+    
+    .navbar-title {
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 500;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    
+    .navbar-right {
+      margin-left: auto;
+    }
+    
+    .connect-wallet-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+    
+    .connect-wallet-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px);
+    }
+    
+    /* 钱包弹窗样式 */
+    .wallet-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .wallet-modal.active {
+      display: flex;
+    }
+    
+    .wallet-modal-content {
+      background: rgba(17, 17, 17, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 30px;
+      width: 400px;
+      max-width: 90vw;
+      position: relative;
+      animation: modalSlideIn 0.3s ease;
+    }
+    
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    .modal-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    
+    .modal-title {
+      color: #fff;
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .modal-subtitle {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.9rem;
+    }
+    
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+    
+    .close-btn:hover {
+      color: #fff;
+    }
+    
+    .wallet-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .wallet-option {
+      display: flex;
+      align-items: center;
+      padding: 15px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .wallet-option:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .wallet-icon {
+      width: 32px;
+      height: 32px;
+      margin-right: 15px;
+      border-radius: 8px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .wallet-info {
+      flex: 1;
+    }
+    
+    .wallet-name {
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    
+    .wallet-desc {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.8rem;
+    }
+    
+    .wallet-category {
+      margin: 20px 0 10px 0;
+      text-align: center;
+    }
+    
+    .category-title {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 8px;
+    }
+    
+    .container {
+      display: flex;
+      height: 100%;
+      width: 100%;
+      padding-top: 60px; /* 为顶部导航栏留出空间 */
+    }
+    .panel {
+      flex: 1;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: relative;
+      transition: flex 0.5s ease, filter 0.5s ease;
+      filter: brightness(0.5) grayscale(20%);
+      cursor: pointer;
+    }
+    .panel.active {
+      flex: 5;
+      filter: brightness(1) grayscale(0%);
+      z-index: 2;
+    }
+    .overlay {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: #fff;
+      font-size: 1.5rem;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      background: rgba(0,0,0,0.4);
+      padding: 10px 20px;
+      border-radius: 8px;
+    }
+    .panel.active .overlay {
+      opacity: 1;
+    }
+
+    @keyframes slideOutUp {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-100vh); opacity: 0.7; }
+    }
+    body.slide-out-up .scroll-container {
+      animation: slideOutUp 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
+    }
+  </style>
+  </head>
+<body>
+  <!-- 全屏滚动容器 -->
+  <div class="scroll-container" id="scrollContainer">
+    
+    <!-- 第一个页面 - 角色展示 -->
+    <div class="page page-1">
+      <!-- 顶部导航栏 -->
+      <div class="top-navbar">
+        <div class="navbar-title">角色展示</div>
+        <div class="navbar-right">
+          <button class="connect-wallet-btn" id="connectWalletBtn">连接钱包</button>
+        </div>
+      </div>
+      
+      <!-- 钱包连接弹窗 -->
+      <div class="wallet-modal" id="walletModal">
+        <div class="wallet-modal-content">
+          <button class="close-btn" id="closeModalBtn">&times;</button>
+          <div class="modal-header">
+            <div class="modal-title">连接钱包</div>
+            <div class="modal-subtitle">选择您要连接的钱包</div>
+          </div>
+          <div class="wallet-options">
+            <!-- Solana 钱包 -->
+            <div class="wallet-category">
+              <div class="category-title">Solana 钱包</div>
+            </div>
+            <div class="wallet-option" data-wallet="phantom">
+              <div class="wallet-icon">👻</div>
+              <div class="wallet-info">
+                <div class="wallet-name">Phantom</div>
+                <div class="wallet-desc">最受欢迎的Solana钱包</div>
+              </div>
+            </div>
+            <div class="wallet-option" data-wallet="okx">
+              <div class="wallet-icon">🟨</div>
+              <div class="wallet-info">
+                <div class="wallet-name">OKX Wallet</div>
+                <div class="wallet-desc">多链去中心化钱包</div>
+              </div>
+            </div>
+            <div class="wallet-option" data-wallet="solflare">
+              <div class="wallet-icon">☀️</div>
+              <div class="wallet-info">
+                <div class="wallet-name">Solflare</div>
+                <div class="wallet-desc">功能强大的Solana钱包</div>
+              </div>
+            </div>
+            <div class="wallet-option" data-wallet="slope">
+              <div class="wallet-icon">📈</div>
+              <div class="wallet-info">
+                <div class="wallet-name">Slope</div>
+                <div class="wallet-desc">移动优先的Solana钱包</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="container">
+        <div class="panel active" style="background-image: url('./image1.png')">
+          <div class="overlay">麟狮幻兽</div>
+        </div>
+        <div class="panel" style="background-image: url('./image2.png')">
+          <div class="overlay">白体鼓音驹</div>
+        </div>
+        <div class="panel" style="background-image: url('./image3.png')">
+          <div class="overlay">九尾背眸羊</div>
+        </div>
+        <div class="panel" style="background-image: url('image4.png')">
+          <div class="overlay">三眸鹊音鸮</div>
+        </div>
+        <div class="panel" style="background-image: url('image5.png')">
+          <div class="overlay">四足飞翼虺</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 第二个页面 - 留空 -->
+    <div class="page page-2">
+      <!-- 留空 -->
+    </div>
+    
+  </div>
+  
+  <!-- 页面指示器 -->
+  <div class="page-indicator">
+    <div class="indicator-dot active" data-page="0"></div>
+    <div class="indicator-dot" data-page="1"></div>
+  </div>
+  
+  <!-- 加载指示器 -->
+  <div class="loading-indicator" id="loadingIndicator">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载页面...</div>
+  </div>
+
+  <script>
+    // 全屏滚动相关变量
+    let currentPage = 0;
+    let isScrolling = false;
+    const totalPages = 2;
+    
+    // 滚动灵敏度设置
+    const scrollSensitivity = 50;
+    let lastScrollTime = 0;
+    
+    // 等待DOM加载完成
+    document.addEventListener('DOMContentLoaded', async function() {
+      // 面板切换功能
+      const panels = document.querySelectorAll('.panel');
+      panels.forEach(panel => {
+        panel.addEventListener('click', () => {
+          panels.forEach(p => p.classList.remove('active'));
+          panel.classList.add('active');
+        });
+      });
+
+      // 初始化钱包管理器
+      try {
+        await initWallet();
+        console.log('钱包管理器初始化成功');
+      } catch (error) {
+        console.error('钱包管理器初始化失败:', error);
+      }
+      
+      // 初始化全屏滚动
+      initFullPageScroll();
+      console.log('✅ 全屏滚动功能已初始化');
+      console.log('📖 使用方法：');
+      console.log('  - 鼠标滚轮向下滚动进入第二页 (空白页面)');
+      console.log('  - 键盘方向键↑↓切换页面');
+      console.log('  - 移动设备上下滑动切换页面');
+      console.log('  - 点击右侧圆点指示器快速跳转');
+      console.log('🎯 第二页目前是空白的，可以根据需要添加内容');
+      
+      // 从URL获取页面参数
+      const urlParams = new URLSearchParams(window.location.search);
+      const pageParam = urlParams.get('page');
+      if (pageParam) {
+        const targetPage = parseInt(pageParam) - 1;
+        if (targetPage >= 0 && targetPage < totalPages) {
+          currentPage = targetPage;
+          updatePage();
+        }
+      }
+      
+      // DOM加载完成后开始隐藏加载指示器
+      setTimeout(() => {
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+          loadingIndicator.querySelector('.loading-text').textContent = '准备就绪...';
+        }
+      }, 500);
+      
+      // 监听浏览器后退/前进按钮
+      window.addEventListener('popstate', function(e) {
+        if (e.state && e.state.page !== undefined) {
+          currentPage = e.state.page;
+          updatePage();
+        }
+      });
+    });
+    
+    // 初始化全屏滚动功能
+    function initFullPageScroll() {
+      const scrollContainer = document.getElementById('scrollContainer');
+      const indicators = document.querySelectorAll('.indicator-dot');
+      
+      // 触摸事件相关变量
+      let startY = 0;
+      let startTime = 0;
+      const minSwipeDistance = 50;
+      const maxSwipeTime = 300;
+      
+      // 滚轮事件监听
+      document.addEventListener('wheel', (e) => {
+        e.preventDefault(); // 防止默认滚动行为
+        
+        // 如果钱包弹窗打开，不处理滚动
+        const walletModal = document.getElementById('walletModal');
+        if (walletModal && walletModal.classList.contains('active')) {
+          return;
+        }
+        
+        if (isScrolling) return;
+        
+        // 防止过快滚动
+        const now = Date.now();
+        if (now - lastScrollTime < 100) return;
+        lastScrollTime = now;
+        
+        const delta = e.deltaY;
+        
+        if (Math.abs(delta) > scrollSensitivity) {
+          if (delta > 0 && currentPage < totalPages - 1) {
+            // 向下滚动
+            currentPage++;
+            updatePage();
+          } else if (delta < 0 && currentPage > 0) {
+            // 向上滚动
+            currentPage--;
+            updatePage();
+          }
+        }
+      }, { passive: false });
+      
+      // 页面指示器点击事件
+      indicators.forEach((indicator, index) => {
+        indicator.addEventListener('click', () => {
+          if (isScrolling || currentPage === index) return;
+          currentPage = index;
+          updatePage();
+        });
+      });
+      
+      // 键盘事件监听
+      document.addEventListener('keydown', (e) => {
+        // 如果钱包弹窗打开，不处理键盘事件
+        const walletModal = document.getElementById('walletModal');
+        if (walletModal && walletModal.classList.contains('active')) {
+          return;
+        }
+        
+        if (isScrolling) return;
+        
+        switch(e.key) {
+          case 'ArrowDown':
+          case 'PageDown':
+            e.preventDefault();
+            if (currentPage < totalPages - 1) {
+              currentPage++;
+              updatePage();
+            }
+            break;
+          case 'ArrowUp':
+          case 'PageUp':
+            e.preventDefault();
+            if (currentPage > 0) {
+              currentPage--;
+              updatePage();
+            }
+            break;
+          case 'Home':
+            e.preventDefault();
+            if (currentPage !== 0) {
+              currentPage = 0;
+              updatePage();
+            }
+            break;
+          case 'End':
+            e.preventDefault();
+            if (currentPage !== totalPages - 1) {
+              currentPage = totalPages - 1;
+              updatePage();
+            }
+            break;
+        }
+      });
+      
+      // 触摸事件监听 (移动设备支持)
+      document.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+        startTime = Date.now();
+      }, { passive: true });
+      
+      document.addEventListener('touchend', (e) => {
+        if (isScrolling) return;
+        
+        // 如果钱包弹窗打开，不处理触摸
+        const walletModal = document.getElementById('walletModal');
+        if (walletModal && walletModal.classList.contains('active')) {
+          return;
+        }
+        
+        const endY = e.changedTouches[0].clientY;
+        const endTime = Date.now();
+        const distance = startY - endY;
+        const duration = endTime - startTime;
+        
+        // 检查是否为有效的滑动
+        if (Math.abs(distance) > minSwipeDistance && duration < maxSwipeTime) {
+          if (distance > 0 && currentPage < totalPages - 1) {
+            // 向上滑动 (下一页)
+            currentPage++;
+            updatePage();
+          } else if (distance < 0 && currentPage > 0) {
+            // 向下滑动 (上一页)
+            currentPage--;
+            updatePage();
+          }
+        }
+      }, { passive: true });
+    }
+    
+    // 更新页面位置
+    function updatePage() {
+      if (isScrolling) return;
+
+      // 如果是第二页，先滑出动画再跳转到 页面二.html
+      if (currentPage === 1) {
+        document.body.classList.add('slide-out-up');
+        setTimeout(() => {
+          window.location.href = '页面二.html';
+        }, 500);
+        return;
+      }
+
+      isScrolling = true;
+      const scrollContainer = document.getElementById('scrollContainer');
+      const indicators = document.querySelectorAll('.indicator-dot');
+
+      // 更新滚动容器位置
+      const translateY = -currentPage * 100;
+      scrollContainer.style.transform = `translateY(${translateY}vh)`;
+
+      // 更新页面指示器
+      indicators.forEach((indicator, index) => {
+        indicator.classList.toggle('active', index === currentPage);
+      });
+
+      // 添加页面切换的CSS类
+      document.body.classList.add('page-transitioning');
+
+      // 滚动动画完成后重置标志
+      setTimeout(() => {
+        isScrolling = false;
+        document.body.classList.remove('page-transitioning');
+      }, 800);
+
+      // 立即更新页面标题
+      document.title = '角色展示';
+
+      // 更新URL
+      window.history.replaceState({page: currentPage}, '', window.location.pathname);
+
+      // 触发页面变化事件
+      onPageChange(currentPage);
+    }
+    
+          // 页面变化回调
+      function onPageChange(pageIndex) {
+        console.log('当前页面:', pageIndex + 1);
+        
+        // 根据页面执行特定逻辑
+        switch(pageIndex) {
+          case 0:
+            console.log('在角色展示页面');
+            // 确保钱包功能正常
+            break;
+          case 1:
+            console.log('在第二个页面 (空白页面)');
+            // 这里是空白页面，可以根据需要添加内容
+            break;
+        }
+      }
+    
+    // 获取当前页面
+    function getCurrentPage() {
+      return currentPage;
+    }
+    
+    // 跳转到指定页面
+    function goToPage(pageIndex) {
+      if (pageIndex >= 0 && pageIndex < totalPages && pageIndex !== currentPage && !isScrolling) {
+        currentPage = pageIndex;
+        updatePage();
+      }
+    }
+    
+    // 禁用移动端的橡皮筋效果
+    document.addEventListener('touchmove', function(e) {
+      // 如果钱包弹窗打开，允许滚动
+      const walletModal = document.getElementById('walletModal');
+      if (walletModal && walletModal.classList.contains('active')) {
+        return;
+      }
+      e.preventDefault();
+    }, { passive: false });
+    
+    // 确保页面完全加载后再显示
+    window.addEventListener('load', function() {
+      document.body.classList.add('loaded');
+      
+      // 延迟隐藏加载指示器
+      setTimeout(() => {
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+          loadingIndicator.classList.add('hidden');
+          setTimeout(() => {
+            loadingIndicator.style.display = 'none';
+          }, 500);
+        }
+      }, 1000);
+    });
+    
+    // 添加页面可见性API支持
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        // 页面隐藏时暂停动画
+        document.body.classList.add('page-hidden');
+      } else {
+        // 页面显示时恢复动画
+        document.body.classList.remove('page-hidden');
+      }
+    });
+  </script>
+</body>
+</html>

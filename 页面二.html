@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山海经百科 - 异兽图谱</title>
+    <style>
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Noto Serif SC", "SimSun", serif;
+        }
+
+        body {
+            background-color: #f9f6f0;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%239C92AC' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.3;
+        }
+
+        .site-title {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .site-subtitle {
+            font-size: 1.1rem;
+            font-weight: 300;
+            position: relative;
+            color: #e0e0e0;
+        }
+
+        /* 搜索区域 */
+        .search-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        #search-input {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #d4c8b0;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            background-color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        #search-input:focus {
+            outline: none;
+            border-color: #8b7d6b;
+            box-shadow: 0 0 0 3px rgba(139, 125, 107, 0.1);
+        }
+
+        #search-btn {
+            padding: 0 1.5rem;
+            background-color: #8b7d6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #search-btn:hover {
+            background-color: #6d614e;
+            transform: translateY(-2px);
+        }
+
+        .search-tips {
+            margin-top: 0.8rem;
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+            font-style: italic;
+        }
+
+        /* 图片画廊 */
+        .gallery {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .gallery-item {
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .creature-img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .creature-info {
+            padding: 1.2rem;
+        }
+
+        .creature-name {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            border-left: 3px solid #8b7d6b;
+            padding-left: 0.8rem;
+        }
+
+        .creature-desc {
+            font-size: 0.95rem;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 5rem 1rem;
+            color: #888;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #8b7d6b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .site-title {
+                font-size: 2rem;
+            }
+
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 1.5rem;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            #search-btn {
+                padding: 0.8rem;
+            }
+        }
+
+        /* 滑入动画 */
+        @keyframes slideInDown {
+          0% { transform: translateY(-100vh); opacity: 0.7; }
+          100% { transform: translateY(0); opacity: 1; }
+        }
+        body.slide-in-down {
+          animation: slideInDown 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
+        }
+        /* 滑出动画 */
+        @keyframes slideOutDown {
+          0% { transform: translateY(0); opacity: 1; }
+          100% { transform: translateY(100vh); opacity: 0.7; }
+        }
+        body.slide-out-down {
+          animation: slideOutDown 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
+        }
+    </style>
+    <script src="./wallet.js"></script>
+</head>
+<body class="slide-in-down">
+    <!-- 移除顶部导航栏HTML -->
+
+    <!-- 头部 -->
+    <header>
+        <h1 class="site-title">山海经百科</h1>
+        <p class="site-subtitle">探索上古异兽的神秘世界</p>
+    </header>
+
+    <!-- 搜索区域 -->
+    <div class="search-container">
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="search-input" 
+                placeholder="搜索异兽名称（如：九尾狐、烛龙、鲲鹏）..."
+            >
+            <button id="search-btn">搜索</button>
+        </div>
+        <p class="search-tips">提示：可尝试搜索"鸟身"、"人面"、"九尾"等特征词</p>
+    </div>
+
+    <!-- 加载动画 -->
+    <div class="loading">
+        <div class="loading-spinner"></div>
+        <p>正在召唤异兽...</p>
+    </div>
+
+    <!-- 图片画廊 -->
+    <div class="gallery" id="gallery-container">
+        <!-- 图片将通过JS动态生成 -->
+    </div>
+
+    <script>
+        // 山海经异兽数据（包含名称、描述和图片）
+        const shanhaiData = [
+            {
+                name: "九尾狐",
+                description: "出自《山海经·南山经》：青丘之山，有兽焉，其状如狐而九尾，其音如婴儿，能食人；食者不蛊。",
+                image: "jiuweihu.png"
+            },
+            {
+                name: "烛龙",
+                description: "出自《山海经·大荒北经》：西北海之外，赤水之北，有章尾山。有神，人面蛇身而赤，身长千里，直目正乘，其瞑乃晦，其视乃明，不食不寝不息，风雨是谒。是烛九阴，是谓烛龙。",
+                image: "zhulong.png"
+            },
+            {
+                name: "鲲鹏",
+                description: "出自《山海经·大荒东经》：有鱼焉，其广数千里，其长称焉，其名为鲲。有鸟焉，其名为鹏，翼若垂天之云，其体称焉。",
+                image: "kunpeng.png"
+            },
+            {
+                name: "饕餮",
+                description: "出自《山海经·北山经》：钩吾之山，有兽焉，其状如羊身人面，其目在腋下，虎齿人爪，其音如婴儿，名曰饕餮，是食人。",
+                image: "taoti.png"
+            },
+            {
+                name: "白泽",
+                description: "出自《山海经·东次三经》：东望恒山，有兽焉，名曰白泽，能言语，知万物情状，王者得之，能辟兵灾。",
+                image: "baize.png"
+            },
+            {
+                name: "毕方",
+                description: "出自《山海经·西山经》：章莪之山，有鸟焉，其状如鹤，一足，赤文青质而白喙，名曰毕方，其鸣自叫也，见则其邑有讹火。",
+                image: "bifang.png"
+            },
+            {
+                name: "穷奇",
+                description: "出自《山海经·西山经》：邽山，其上有兽焉，其状如牛，猬毛，名曰穷奇，音如獆狗，是食人。",
+                image: "qiongqi.png"
+            },
+            {
+                name: "狰",
+                description: "出自《山海经·西山经》：章莪之山，有兽焉，其状如赤豹，五尾一角，其音如击石，其名曰狰。",
+                image: "zheng.png"
+            }
+        ];
+
+        // DOM元素
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const galleryContainer = document.getElementById('gallery-container');
+        const loading = document.querySelector('.loading');
+
+        // 初始化页面：显示所有异兽
+        function initGallery() {
+            renderCreatures(shanhaiData);
+        }
+
+        // 渲染异兽卡片
+        function renderCreatures(creatures) {
+            galleryContainer.innerHTML = '';
+
+            if (creatures.length === 0) {
+                galleryContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i>🔍</i>
+                        <h3>未找到相关异兽</h3>
+                        <p>请尝试其他关键词或特征描述</p>
+                    </div>
+                `;
+                return;
+            }
+
+            creatures.forEach(creature => {
+                const card = document.createElement('div');
+                card.className = 'gallery-item';
+                card.innerHTML = `
+                    <img src="${creature.image}" alt="${creature.name}" class="creature-img">
+                    <div class="creature-info">
+                        <h3 class="creature-name">${creature.name}</h3>
+                        <p class="creature-desc">${creature.description}</p>
+                    </div>
+                `;
+                galleryContainer.appendChild(card);
+            });
+        }
+
+        // 搜索功能
+        function searchCreatures() {
+            const keyword = searchInput.value.trim().toLowerCase();
+            
+            if (!keyword) {
+                renderCreatures(shanhaiData);
+                return;
+            }
+
+            // 显示加载动画
+            loading.style.display = 'block';
+            galleryContainer.innerHTML = '';
+
+            // 模拟网络请求延迟
+            setTimeout(() => {
+                const filtered = shanhaiData.filter(creature => 
+                    creature.name.toLowerCase().includes(keyword) || 
+                    creature.description.toLowerCase().includes(keyword)
+                );
+                renderCreatures(filtered);
+                loading.style.display = 'none';
+            }, 800);
+        }
+
+        // 事件监听
+        searchBtn.addEventListener('click', searchCreatures);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchCreatures();
+            }
+        });
+
+        // 初始化
+        window.addEventListener('DOMContentLoaded', initGallery);
+
+        // 钱包自动检测与按钮状态
+        document.addEventListener('DOMContentLoaded', async function() {
+          const btn = document.getElementById('connectWalletBtn');
+          if (typeof isWalletConnected === 'function' && isWalletConnected()) {
+            btn.textContent = '已连接';
+            btn.disabled = true;
+          } else {
+            btn.textContent = '连接钱包';
+            btn.disabled = false;
+            btn.onclick = async function() {
+              await connectWallet();
+              btn.textContent = '已连接';
+              btn.disabled = true;
+            }
+          }
+        });
+
+        // 替换返回首页逻辑：先加动画再跳转
+        function smoothBackToHome() {
+          document.body.classList.add('slide-out-down');
+          setTimeout(() => {
+            window.location.href = 'index (6) (5).html';
+          }, 500);
+        }
+        // 鼠标滚轮向上返回首页
+        document.addEventListener('wheel', function(e) {
+            if (e.deltaY < 0) {
+                smoothBackToHome();
+            }
+        });
+        // 触摸上滑返回首页
+        let startY = 0;
+        document.addEventListener('touchstart', function(e) {
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+        document.addEventListener('touchend', function(e) {
+            let endY = e.changedTouches[0].clientY;
+            if (startY - endY > 50) {
+                smoothBackToHome();
+            }
+        }, { passive: true });
+    </script>
+</body>
+</html>
