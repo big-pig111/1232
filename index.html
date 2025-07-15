@@ -68,20 +68,20 @@
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.3);
-      border: 2px solid rgba(255, 255, 255, 0.6);
+      background: rgba(60, 60, 60, 0.3); /* 深灰色半透明 */
+      border: 2px solid rgba(60, 60, 60, 0.6);
       cursor: pointer;
       transition: all 0.3s ease;
     }
 
     .indicator-dot.active {
-      background: rgba(255, 255, 255, 0.8);
-      border-color: rgba(255, 255, 255, 1);
+      background: #FFD600; /* 明亮黄色 */
+      border-color: #FFD600;
       transform: scale(1.2);
     }
 
     .indicator-dot:hover {
-      background: rgba(255, 255, 255, 0.6);
+      background: rgba(255, 214, 0, 0.6);
     }
 
     /* 防止页面被选中 */
@@ -525,6 +525,7 @@
   <div class="page-indicator">
     <div class="indicator-dot active" data-page="0"></div>
     <div class="indicator-dot" data-page="1"></div>
+    <div class="indicator-dot" data-page="2"></div>
   </div>
   
   <!-- 加载指示器 -->
