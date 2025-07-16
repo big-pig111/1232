@@ -427,6 +427,9 @@
     <nav id="top-navbar" style="position:fixed;top:0;left:0;width:100vw;height:60px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06);z-index:3000;display:flex;align-items:center;justify-content:space-between;padding:0 2.5vw;">
       <div style="font-size:2rem;font-weight:bold;color:#222;letter-spacing:2px;">山海经百科</div>
       <div style="display:flex;align-items:center;gap:18px;">
+        <span id="userScoreBox" style="display:none;font-size:1.1rem;color:#8b7d6b;font-weight:bold;background:#f7f6f3;padding:0.3rem 1.1rem;border-radius:8px;">积分：<span id="userScore">0</span>
+  <button id="refreshScoreBtn" title="刷新积分" style="margin-left:8px;width:28px;height:28px;border:none;background:#f0ede7;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.2s;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9a6 6 0 1 1 6 6" stroke="#8b7d6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13v-4h4" stroke="#8b7d6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+</span>
         <button id="taskBtn" style="background:#ffd600;color:#222;padding:0.5rem 1.2rem;border:none;border-radius:8px;font-size:1.1rem;cursor:pointer;">任务</button>
         <button id="loginBtn" style="background:#8b7d6b;color:#fff;padding:0.5rem 1.5rem;border:none;border-radius:8px;font-size:1.1rem;cursor:pointer;">登录</button>
         <div id="userProfileBox" style="display:none;align-items:center;gap:10px;cursor:pointer;">
@@ -798,6 +801,15 @@
                       await db.collection('beasts').doc(doc.id).update({
                         likes: firebase.firestore.FieldValue.increment(1)
                       });
+                      // 给上传者加5分
+                      const data = doc.data();
+                      if (data.uploader && data.uploader.uid) {
+                        await addLikeScore(data.uploader.uid);
+                      }
+                      // 给点赞者加1分
+                      if (user && user.uid) {
+                        await addUserScore(user.uid, 1, '点赞');
+                      }
                     }
                     localStorage.setItem(likeKey, now.toString());
                     await loadAllBeasts();
@@ -919,6 +931,38 @@
         const db = firebase.firestore();
         const storage = firebase.storage();
         const rtdb = firebase.database(); // 新增Realtime Database实例
+
+        // 积分操作工具
+        async function addUserScore(uid, delta, reason) {
+          if (!uid) return;
+          const scoreRef = rtdb.ref('user_scores/' + uid + '/score');
+          await scoreRef.transaction(score => (score || 0) + delta);
+          // 可选：记录积分变动日志
+          if (reason) {
+            const logRef = rtdb.ref('user_scores/' + uid + '/logs');
+            await logRef.push({ delta, reason, time: Date.now() });
+          }
+        }
+        // 推文任务通过后加分（每日一次）
+        async function addTweetScoreIfNotToday(uid) {
+          if (!uid) return;
+          const today = new Date();
+          const ymd = today.getFullYear() + '-' + (today.getMonth()+1) + '-' + today.getDate();
+          const dailyRef = rtdb.ref('user_scores/' + uid + '/tweet_daily');
+          const snap = await dailyRef.get();
+          if (snap.exists() && snap.val() === ymd) return false;
+          await addUserScore(uid, 100, '每日推文任务');
+          await dailyRef.set(ymd);
+          return true;
+        }
+        // 上传内容加1分
+        async function addUploadScore(uid) {
+          await addUserScore(uid, 1, '上传内容');
+        }
+        // 被点赞加5分
+        async function addLikeScore(uid) {
+          await addUserScore(uid, 5, '内容被点赞');
+        }
 
         // 卡片留言板相关逻辑（改为Realtime Database）
         async function loadCardComments(beastId, card) {
@@ -1118,6 +1162,7 @@
             beastPreview.style.display = 'none';
             descCount.textContent = '0';
             await loadAllBeasts();
+            await addUploadScore(user.uid); // 上传内容加1分
           } catch (err) {
             alert('上传失败：' + (err.message || err));
           } finally {
@@ -1216,13 +1261,13 @@
             const provider = new firebase.auth.TwitterAuthProvider();
             try {
               await auth.signInWithPopup(provider);
-              alert('请在新打开的推特页面手动点击“推文”按钮完成发布！');
+              alert('请在新打开的推特页面手动点击"推文"按钮完成发布！');
               window.open(tweetUrl, '_blank');
             } catch (e) {
               alert('推特登录失败: ' + (e.message || e));
             }
           } else {
-            alert('请在新打开的推特页面手动点击“推文”按钮完成发布！');
+            alert('请在新打开的推特页面手动点击"推文"按钮完成发布！');
             window.open(tweetUrl, '_blank');
           }
         };
@@ -1263,6 +1308,7 @@
               twitterUid: user.providerData[0].uid,
               submitted: firebase.firestore.FieldValue.serverTimestamp()
             });
+            await addTweetScoreIfNotToday(user.uid); // 推文任务加分
             alert('推文链接已提交，等待人工审核！');
             tweetLinkModal.style.display = 'none';
           } catch (e) {
@@ -1298,6 +1344,45 @@
         const goHomeBtn = document.getElementById('goHomeBtn');
         if(goHomeBtn){
           goHomeBtn.onclick = () => { window.location.href = 'index.html'; };
+        }
+
+        // 积分显示逻辑
+        const userScoreBox = document.getElementById('userScoreBox');
+        const userScoreSpan = document.getElementById('userScore');
+        function showUserScore(score) {
+          userScoreBox.style.display = 'inline-block';
+          userScoreSpan.textContent = score || 0;
+        }
+        function hideUserScore() {
+          userScoreBox.style.display = 'none';
+        }
+        function listenUserScore(user) {
+          if (!user) { hideUserScore(); return; }
+          const scoreRef = rtdb.ref('user_scores/' + user.uid + '/score');
+          scoreRef.on('value', snap => {
+            showUserScore(snap.val() || 0);
+          });
+        }
+        auth.onAuthStateChanged(user => {
+          if (user) {
+            listenUserScore(user);
+          } else {
+            hideUserScore();
+          }
+        });
+
+        // 刷新积分按钮逻辑
+        const refreshScoreBtn = document.getElementById('refreshScoreBtn');
+        if(refreshScoreBtn){
+          refreshScoreBtn.onclick = () => {
+            const user = auth.currentUser;
+            if(user){
+              const scoreRef = rtdb.ref('user_scores/' + user.uid + '/score');
+              scoreRef.once('value').then(snap => {
+                userScoreSpan.textContent = snap.val() || 0;
+              });
+            }
+          };
         }
     </script>
 </body>
