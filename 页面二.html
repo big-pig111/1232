@@ -204,24 +204,78 @@
         body.slide-out-down {
           animation: slideOutDown 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
         }
+        .like-loading-spinner .loading-spinner {
+            width: 28px !important;
+            height: 28px !important;
+            border-width: 3px !important;
+            border-top-color: #e25555 !important;
+            border-right-color: #e25555 !important;
+            background: rgba(255,255,255,0.7);
+            border-radius: 50%;
+            position: absolute;
+            left: 0; top: 0;
+        }
+        .like-loading-spinner {
+            display: none;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%,-50%);
+            z-index: 2;
+        }
     </style>
     <script src="./wallet.js"></script>
 </head>
 <body class="slide-in-down">
+    <!-- 顶部固定上边栏 -->
+    <nav id="top-navbar" style="position:fixed;top:0;left:0;width:100vw;height:60px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06);z-index:3000;display:flex;align-items:center;justify-content:space-between;padding:0 2.5vw;">
+      <div style="font-size:2rem;font-weight:bold;color:#222;letter-spacing:2px;">山海经百科</div>
+      <div style="display:flex;align-items:center;gap:18px;">
+        <button id="taskBtn" style="background:#ffd600;color:#222;padding:0.5rem 1.2rem;border:none;border-radius:8px;font-size:1.1rem;cursor:pointer;">任务</button>
+        <button id="loginBtn" style="background:#8b7d6b;color:#fff;padding:0.5rem 1.5rem;border:none;border-radius:8px;font-size:1.1rem;cursor:pointer;">登录</button>
+        <div id="userProfileBox" style="display:none;align-items:center;gap:10px;cursor:pointer;">
+          <img id="userAvatar" src="" alt="头像" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #eee;">
+        </div>
+      </div>
+    </nav>
+    <!-- 社区任务弹窗 -->
+    <div id="taskModal" style="display:none;position:fixed;z-index:4000;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:2rem 2.5rem;border-radius:16px;max-width:90vw;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;display:flex;flex-direction:column;align-items:center;">
+        <button id="closeTaskModal" style="position:absolute;top:10px;right:16px;font-size:1.5rem;background:none;border:none;cursor:pointer;">×</button>
+        <h3 style="margin-bottom:1.5rem;">社区任务</h3>
+        <div style="width:100%;margin-bottom:1.2rem;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:1.1rem;font-weight:500;">1. 发布一条推文</div>
+        </div>
+        <div style="display:flex;gap:1.2rem;">
+          <button id="tweetBtn" style="background:#1da1f2;color:#fff;padding:0.6rem 1.5rem;border:none;border-radius:8px;font-size:1.05rem;cursor:pointer;">一键发布</button>
+          <button id="verifyTweetBtn" style="background:#8b7d6b;color:#fff;padding:0.6rem 1.5rem;border:none;border-radius:8px;font-size:1.05rem;cursor:pointer;">验证</button>
+        </div>
+      </div>
+    </div>
+    <!-- 登录弹窗 -->
+    <div id="loginModal" style="display:none;position:fixed;z-index:4000;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:2rem 2.5rem;border-radius:16px;max-width:90vw;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;display:flex;flex-direction:column;align-items:center;">
+        <button id="closeLoginModal" style="position:absolute;top:10px;right:16px;font-size:1.5rem;background:none;border:none;cursor:pointer;">×</button>
+        <h3 style="margin-bottom:1.5rem;">选择登录方式</h3>
+        <button id="anonymousLogin" style="background:#8b7d6b;color:#fff;padding:0.7rem 2.5rem;border:none;border-radius:8px;font-size:1.1rem;margin-bottom:1rem;cursor:pointer;">匿名登录</button>
+        <button id="twitterLogin" style="background:#1da1f2;color:#fff;padding:0.7rem 2.5rem;border:none;border-radius:8px;font-size:1.1rem;cursor:pointer;">推特登录</button>
+      </div>
+    </div>
+    <!-- 个人资料弹窗 -->
+    <div id="profileModal" style="display:none;position:fixed;z-index:4000;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:2rem 2.5rem;border-radius:16px;max-width:90vw;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;display:flex;flex-direction:column;align-items:center;">
+        <button id="closeProfileModal" style="position:absolute;top:10px;right:16px;font-size:1.5rem;background:none;border:none;cursor:pointer;">×</button>
+        <img id="profileAvatar" src="" alt="头像" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:1rem;border:2px solid #eee;">
+        <div id="profileName" style="font-size:1.2rem;font-weight:bold;margin-bottom:1.5rem;">用户名</div>
+        <button id="logoutBtn" style="background:#e25555;color:#fff;padding:0.7rem 2.5rem;border:none;border-radius:8px;font-size:1.1rem;cursor:pointer;">退出登录</button>
+      </div>
+    </div>
     <!-- 页面指示器 -->
     <div class="page-indicator" style="position: fixed; right: 30px; top: 50%; transform: translateY(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 15px;">
       <div class="indicator-dot" style="width: 12px; height: 12px; border-radius: 50%; background: rgba(60,60,60,0.3); border: 2px solid rgba(60,60,60,0.6); margin-bottom: 10px;"></div>
       <div class="indicator-dot active" style="width: 12px; height: 12px; border-radius: 50%; background: #FFD600; border: 2px solid #FFD600; margin-bottom: 10px;"></div>
       <div class="indicator-dot" style="width: 12px; height: 12px; border-radius: 50%; background: rgba(60,60,60,0.3); border: 2px solid rgba(60,60,60,0.6);"></div>
     </div>
-    <!-- 移除顶部导航栏HTML -->
-
-    <!-- 头部 -->
-    <header>
-        <h1 class="site-title">山海经百科</h1>
-        <p class="site-subtitle">探索上古异兽的神秘世界</p>
-    </header>
-
     <!-- 搜索区域 -->
     <div class="search-container">
         <div class="search-box">
@@ -271,6 +325,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script>
         // 山海经异兽数据（包含名称、描述和图片）
         const shanhaiData = [
@@ -322,15 +377,24 @@
         const galleryContainer = document.getElementById('gallery-container');
         const loading = document.querySelector('.loading');
 
-        // 初始化页面：显示所有异兽
-        function initGallery() {
-            renderCreatures(shanhaiData);
+        // 初始化内置数据到Firestore（只执行一次）
+        async function syncShanhaiDataToFirestore() {
+          const snap = await db.collection('beasts').where('type', '==', 'shanhai').get();
+          if (snap.empty) {
+            for (const beast of shanhaiData) {
+              await db.collection('beasts').add({
+                ...beast,
+                likes: 0,
+                created: firebase.firestore.FieldValue.serverTimestamp(),
+                type: 'shanhai'
+              });
+            }
+          }
         }
 
-        // 渲染异兽卡片
+        // 渲染异兽卡片（支持点赞）
         function renderCreatures(creatures) {
             galleryContainer.innerHTML = '';
-
             // 先插入加号卡片
             galleryContainer.innerHTML += `
                 <div class="gallery-item add-card" id="addCard" style="display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
@@ -340,7 +404,6 @@
                   <div style="text-align:center;color:#8b7d6b;font-size:1.1rem;margin-top:1rem;">添加异兽</div>
                 </div>
             `;
-
             if (creatures.length === 0) {
                 galleryContainer.innerHTML += `
                     <div class="empty-state">
@@ -349,52 +412,121 @@
                         <p>请尝试其他关键词或特征描述</p>
                     </div>
                 `;
-                // 绑定加号卡片点击事件
                 document.getElementById('addCard').onclick = () => {
                     document.getElementById('addModal').style.display = 'flex';
                 };
                 return;
             }
-
             creatures.forEach(creature => {
                 const card = document.createElement('div');
                 card.className = 'gallery-item';
+                const beastId = creature.id || creature.name; // Firestore有id，内置用name
+                const liked = localStorage.getItem('liked_' + beastId);
                 card.innerHTML = `
                     <img src="${creature.image}" alt="${creature.name}" class="creature-img">
                     <div class="creature-info">
-                        <h3 class="creature-name">${creature.name}</h3>
+                        <h3 class="creature-name">${creature.name}
+                          <span class="like-btn" data-id="${beastId}" style="margin-left:10px;user-select:none;position:relative;">
+                            <span class="heart" style="color:${liked ? '#e25555' : '#bbb'};cursor:pointer;font-size:1.2em;transition:all 0.2s;">♥</span>
+                            <span class="like-count">${creature.likes || 0}</span>
+                            <span class="like-loading-spinner"><span class="loading-spinner"></span></span>
+                          </span>
+                        </h3>
                         <p class="creature-desc">${creature.description}</p>
                     </div>
                 `;
                 galleryContainer.appendChild(card);
             });
-
-            // 重新绑定加号卡片的点击事件
             document.getElementById('addCard').onclick = () => {
                 document.getElementById('addModal').style.display = 'flex';
             };
+            // 绑定点赞事件
+            setTimeout(() => {
+              galleryContainer.querySelectorAll('.like-btn').forEach(btn => {
+                btn.onclick = async function(e) {
+                  e.stopPropagation();
+                  const beastId = btn.getAttribute('data-id');
+                  const user = auth.currentUser;
+                  if (!user) {
+                    alert('请先登录后再点赞！');
+                    return;
+                  }
+                  // 点赞冷却限制
+                  let uid = user.uid || 'anon';
+                  let cooldown = user.isAnonymous ? 5 * 60 * 1000 : 60 * 1000; // 匿名5分钟，推特1分钟
+                  let likeKey = 'like_cooldown_' + beastId + '_' + uid;
+                  let lastLike = parseInt(localStorage.getItem(likeKey) || '0', 10);
+                  let now = Date.now();
+                  if (now - lastLike < cooldown) {
+                    let left = Math.ceil((cooldown - (now - lastLike)) / 1000);
+                    alert(`请${left}秒后再点赞！`);
+                    return;
+                  }
+                  // 显示点赞loading动画
+                  const spinner = btn.querySelector('.like-loading-spinner');
+                  if (spinner) spinner.style.display = 'inline-block';
+                  const heart = btn.querySelector('.heart');
+                  heart.style.opacity = '0.3';
+                  heart.style.transform = 'scale(0.7)';
+                  try {
+                    // Firestore自增
+                    const beastSnap = await db.collection('beasts').where(beastId.length === 20 ? firebase.firestore.FieldPath.documentId() : 'name', '==', beastId).get();
+                    if (!beastSnap.empty) {
+                      const doc = beastSnap.docs[0];
+                      await db.collection('beasts').doc(doc.id).update({
+                        likes: firebase.firestore.FieldValue.increment(1)
+                      });
+                    }
+                    localStorage.setItem(likeKey, now.toString());
+                    await loadAllBeasts();
+                  } finally {
+                    if (spinner) spinner.style.display = 'none';
+                    heart.style.opacity = '1';
+                    heart.style.transform = 'scale(1)';
+                  }
+                }
+              });
+            }, 0);
         }
 
-        // 搜索功能
+        // 拉取所有异兽（内置+用户上传，按likes降序）
+        async function loadAllBeasts() {
+          loading.style.display = 'block';
+          // 拉取所有beasts
+          const snap = await db.collection('beasts').orderBy('likes','desc').orderBy('created','desc').get();
+          const beasts = [];
+          snap.forEach(doc => {
+            const data = doc.data();
+            beasts.push({ ...data, id: doc.id });
+          });
+          renderCreatures(beasts);
+          loading.style.display = 'none';
+        }
+
+        // 搜索功能（支持likes排序）
         function searchCreatures() {
             const keyword = searchInput.value.trim().toLowerCase();
-            
             if (!keyword) {
-                renderCreatures(shanhaiData);
+                loadAllBeasts();
                 return;
             }
-
-            // 显示加载动画
             loading.style.display = 'block';
             galleryContainer.innerHTML = '';
-
-            // 模拟网络请求延迟
-            setTimeout(() => {
-                const filtered = shanhaiData.filter(creature => 
-                    creature.name.toLowerCase().includes(keyword) || 
-                    creature.description.toLowerCase().includes(keyword)
-                );
-                renderCreatures(filtered);
+            setTimeout(async () => {
+                const snap = await db.collection('beasts').get();
+                let beasts = [];
+                snap.forEach(doc => {
+                  const data = doc.data();
+                  if (
+                    data.name.toLowerCase().includes(keyword) ||
+                    data.description.toLowerCase().includes(keyword)
+                  ) {
+                    beasts.push({ ...data, id: doc.id });
+                  }
+                });
+                // 按likes降序
+                beasts.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+                renderCreatures(beasts);
                 loading.style.display = 'none';
             }, 800);
         }
@@ -408,7 +540,10 @@
         });
 
         // 初始化
-        window.addEventListener('DOMContentLoaded', initGallery);
+        window.addEventListener('DOMContentLoaded', async () => {
+          await syncShanhaiDataToFirestore();
+          await loadAllBeasts();
+        });
 
         // 钱包自动检测与按钮状态
         document.addEventListener('DOMContentLoaded', async function() {
@@ -511,6 +646,11 @@
         }
 
         addCard.onclick = () => {
+          const user = auth.currentUser;
+          if (!user || user.isAnonymous) {
+            alert('请使用推特登录后才能上传异兽！');
+            return;
+          }
           addModal.style.display = 'flex';
         };
         closeAddModal.onclick = () => {
@@ -577,6 +717,12 @@
         // 上传表单提交（图片自动压缩后转base64存Firestore）
         beastForm.onsubmit = async function(e) {
           e.preventDefault();
+          // 推特登录校验
+          const user = auth.currentUser;
+          if (!user || user.isAnonymous) {
+            alert('请使用推特登录后才能上传异兽！');
+            return;
+          }
           if (submitBtn.disabled) return; // 防止极端情况
           const file = beastImage.files[0];
           const name = beastName.value.trim();
@@ -603,13 +749,15 @@
               name,
               description: desc,
               image: base64Url,
-              created: firebase.firestore.FieldValue.serverTimestamp()
+              created: firebase.firestore.FieldValue.serverTimestamp(),
+              likes: 0,
+              type: 'user'
             });
             lastUploadTime = now; // 更新时间戳
             beastForm.reset();
             beastPreview.style.display = 'none';
             descCount.textContent = '0';
-            await loadUserBeasts();
+            await loadAllBeasts();
           } catch (err) {
             alert('上传失败：' + (err.message || err));
           } finally {
@@ -618,28 +766,137 @@
           }
         };
 
-        // 渲染用户上传的异兽（显示图片+名称+简介）
-        async function loadUserBeasts() {
-          const gallery = document.getElementById('gallery-container');
-          // 移除旧的用户上传卡片
-          Array.from(gallery.querySelectorAll('.user-beast')).forEach(e=>e.remove());
-          // 拉取数据
-          const snap = await db.collection('beasts').orderBy('created','desc').get();
-          snap.forEach(doc => {
-            const data = doc.data();
-            const card = document.createElement('div');
-            card.className = 'gallery-item user-beast';
-            card.innerHTML = `
-              <img src="${data.image}" alt="${data.name}" class="creature-img">
-              <div class="creature-info">
-                <h3 class="creature-name">${data.name}</h3>
-                <p class="creature-desc">${data.description}</p>
-              </div>
-            `;
-            gallery.insertBefore(card, gallery.children[1]); // 插在加号后面
-          });
+        // 上边栏登录弹窗逻辑 + Firebase Auth
+        const auth = firebase.auth();
+        const loginBtn = document.getElementById('loginBtn');
+        const taskBtn = document.getElementById('taskBtn');
+        const taskModal = document.getElementById('taskModal');
+        const closeTaskModal = document.getElementById('closeTaskModal');
+        const tweetBtn = document.getElementById('tweetBtn');
+        const verifyTweetBtn = document.getElementById('verifyTweetBtn');
+        const userProfileBox = document.getElementById('userProfileBox');
+        const userAvatar = document.getElementById('userAvatar');
+        const profileModal = document.getElementById('profileModal');
+        const closeProfileModal = document.getElementById('closeProfileModal');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileName = document.getElementById('profileName');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const loginModal = document.getElementById('loginModal');
+        const closeLoginModal = document.getElementById('closeLoginModal');
+        loginBtn.onclick = () => {
+          if (auth.currentUser) return; // 已登录不弹窗
+          loginModal.style.display = 'flex';
+        };
+        userProfileBox.onclick = () => {
+          profileModal.style.display = 'flex';
+          // 展示头像和名称
+          const user = auth.currentUser;
+          if (user) {
+            profileAvatar.src = user.photoURL || 'https://api.dicebear.com/7.x/identicon/svg?seed=' + (user.uid || 'anon');
+            profileName.textContent = user.displayName || (user.isAnonymous ? '匿名用户' : '未命名用户');
+          }
+        };
+        closeProfileModal.onclick = () => {
+          profileModal.style.display = 'none';
+        };
+        logoutBtn.onclick = async () => {
+          await auth.signOut();
+          profileModal.style.display = 'none';
+        };
+        closeLoginModal.onclick = () => {
+          loginModal.style.display = 'none';
+        };
+        document.getElementById('anonymousLogin').onclick = async function() {
+          try {
+            await auth.signInAnonymously();
+            alert('匿名登录成功！');
+            loginModal.style.display = 'none';
+          } catch (e) {
+            alert('匿名登录失败: ' + (e.message || e));
+          }
+        };
+        document.getElementById('twitterLogin').onclick = async function() {
+          const provider = new firebase.auth.TwitterAuthProvider();
+          try {
+            await auth.signInWithPopup(provider);
+            alert('推特登录成功！');
+            loginModal.style.display = 'none';
+          } catch (e) {
+            alert('推特登录失败: ' + (e.message || e));
+          }
+        };
+        function updateLoginStatus() {
+          const user = auth.currentUser;
+          if (user) {
+            loginBtn.style.display = 'none';
+            userProfileBox.style.display = 'flex';
+            userAvatar.src = user.photoURL || 'https://api.dicebear.com/7.x/identicon/svg?seed=' + (user.uid || 'anon');
+            userAvatar.title = user.displayName || (user.isAnonymous ? '匿名用户' : '未命名用户');
+          } else {
+            loginBtn.textContent = '登录';
+            loginBtn.style.display = 'inline-block';
+            loginBtn.disabled = false;
+            userProfileBox.style.display = 'none';
+          }
         }
-        window.addEventListener('DOMContentLoaded', loadUserBeasts);
+        auth.onAuthStateChanged(updateLoginStatus);
+        // 任务弹窗逻辑
+        taskBtn.onclick = () => {
+          taskModal.style.display = 'flex';
+        };
+        closeTaskModal.onclick = () => {
+          taskModal.style.display = 'none';
+        };
+        tweetBtn.onclick = async () => {
+          const user = auth.currentUser;
+          if (!user || user.isAnonymous) {
+            // 未推特登录，自动登录
+            const provider = new firebase.auth.TwitterAuthProvider();
+            try {
+              await auth.signInWithPopup(provider);
+              // 跳转到推特intent页面
+              const tweetContent = `《山海经》：上古奇书，载山川异兽、神话方国\n欢迎来到山海经社区\n社区网站：https://www.shanhaijing.work\n我们正在组设代币空投活动，快来参与吧！！\n用户上传异兽，点赞获得奇珍异宝！！\nBHHRmpyupaFt8bFcc9KrPG3bJACdDi52nHdGWm8fbonk`;
+              const tweetUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweetContent);
+              window.open(tweetUrl, '_blank');
+            } catch (e) {
+              alert('推特登录失败: ' + (e.message || e));
+            }
+          } else {
+            // 已推特登录，直接跳转推文界面（推文内容后续补充）
+            // window.open('https://twitter.com/intent/tweet?text=这里是推文内容', '_blank');
+          }
+        };
+        // 验证按钮逻辑：保存推文链接到后端，人工审核
+        verifyTweetBtn.onclick = async () => {
+          const url = document.getElementById('tweetUrlInput').value.trim();
+          // 推文链接格式：https://twitter.com/{username}/status/{tweet_id}
+          const re = /^https?:\/\/twitter\.com\/[^\/]+\/status\/(\d+)$/;
+          if (!re.test(url)) {
+            alert('请粘贴正确的推文链接！');
+            return;
+          }
+          const user = auth.currentUser;
+          if (!user || user.isAnonymous) {
+            alert('请先用推特登录！');
+            return;
+          }
+          // 保存到Firestore（tweet_submissions集合）
+          try {
+            await db.collection('tweet_submissions').add({
+              url,
+              uid: user.uid,
+              displayName: user.displayName || '',
+              photoURL: user.photoURL || '',
+              twitterUid: user.providerData[0].uid,
+              submitted: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert('推文链接已提交，等待人工审核！');
+          } catch (e) {
+            alert('提交失败，请稍后重试');
+          }
+        };
+        // 修正主内容区顶部padding，避免被navbar遮挡
+        document.body.style.paddingTop = '60px';
     </script>
 </body>
 </html>
