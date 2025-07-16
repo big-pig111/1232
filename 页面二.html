@@ -321,6 +321,15 @@
         </form>
       </div>
     </div>
+    <!-- 推文链接弹窗 -->
+    <div id="tweetLinkModal" style="display:none;position:fixed;z-index:5000;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:2rem 2.5rem;border-radius:16px;max-width:90vw;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;display:flex;flex-direction:column;align-items:center;">
+        <button id="closeTweetLinkModal" style="position:absolute;top:10px;right:16px;font-size:1.5rem;background:none;border:none;cursor:pointer;">×</button>
+        <h3 style="margin-bottom:1.2rem;">请粘贴你的推文链接</h3>
+        <input id="tweetUrlInput" type="text" placeholder="https://twitter.com/你的用户名/status/推文ID" style="width:100%;margin-bottom:1.2rem;padding:0.5rem;border-radius:6px;border:1px solid #ccc;">
+        <button id="submitTweetUrlBtn" style="background:#1da1f2;color:#fff;padding:0.6rem 2rem;border:none;border-radius:8px;font-size:1.05rem;cursor:pointer;">提交</button>
+      </div>
+    </div>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
@@ -883,35 +892,6 @@
           } else {
             alert('请在新打开的推特页面手动点击“推文”按钮完成发布！');
             window.open(tweetUrl, '_blank');
-          }
-        };
-        // 验证按钮逻辑：保存推文链接到后端，人工审核
-        verifyTweetBtn.onclick = async () => {
-          const url = document.getElementById('tweetUrlInput').value.trim();
-          // 推文链接格式：https://twitter.com/{username}/status/{tweet_id}
-          const re = /^https?:\/\/twitter\.com\/[^\/]+\/status\/(\d+)$/;
-          if (!re.test(url)) {
-            alert('请粘贴正确的推文链接！');
-            return;
-          }
-          const user = auth.currentUser;
-          if (!user || user.isAnonymous) {
-            alert('请先用推特登录！');
-            return;
-          }
-          // 保存到Firestore（tweet_submissions集合）
-          try {
-            await db.collection('tweet_submissions').add({
-              url,
-              uid: user.uid,
-              displayName: user.displayName || '',
-              photoURL: user.photoURL || '',
-              twitterUid: user.providerData[0].uid,
-              submitted: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            alert('推文链接已提交，等待人工审核！');
-          } catch (e) {
-            alert('提交失败，请稍后重试');
           }
         };
         // 修正主内容区顶部padding，避免被navbar遮挡
