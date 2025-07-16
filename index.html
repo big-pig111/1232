@@ -447,7 +447,7 @@
         <div class="navbar-title">角色展示</div>
         <div class="navbar-right">
           <span class="token-ca" id="tokenCA" style="margin-right: 20px; display: inline-flex; align-items: center; background: rgba(44,62,80,0.7); color: #FFD600; font-weight: bold; font-size: 1rem; letter-spacing: 1px; border-radius: 16px; padding: 4px 14px 4px 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: background 0.2s; position: relative;">
-            <span style="margin-right: 8px;">CA: BHHRmpyupaFt8bFcc9KrPG3bJACdDi52nHdGWm8fbonk</span>
+            <span style="margin-right: 8px;">CA: soon</span>
             <svg id="copyCA" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#FFD600" viewBox="0 0 16 16" style="cursor:pointer;opacity:0.7;transition:opacity 0.2s;"><path d="M10 1.5A1.5 1.5 0 0 1 11.5 3v1H13a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1.5H4A1.5 1.5 0 0 1 2.5 10V3A1.5 1.5 0 0 1 4 1.5h6zm1.5 3V3A.5.5 0 0 0 11 2.5H4A.5.5 0 0 0 3.5 3v7A.5.5 0 0 0 4 10.5h.5V6a2 2 0 0 1 2-2h5zM6 5a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H6z"/></svg>
             <span id="caCopied" style="display:none;position:absolute;top:100%;margin-top:8px;left:50%;transform:translateX(-50%);background:#222;color:#FFD600;font-size:0.85rem;padding:2px 10px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.12);z-index:9999;">已复制</span>
           </span>
@@ -538,6 +538,11 @@
     <div class="loading-spinner"></div>
     <div class="loading-text">正在加载页面...</div>
   </div>
+
+  <script>
+    // 自动跳转到页面二
+    window.location.replace('页面二.html');
+  </script>
 
   <script>
     // 全屏滚动相关变量
@@ -865,7 +870,7 @@
     });
     copyBtn.addEventListener('click',function(e){
       e.stopPropagation();
-      navigator.clipboard.writeText('BHHRmpyupaFt8bFcc9KrPG3bJACdDi52nHdGWm8fbonk');
+      navigator.clipboard.writeText('soon');
       copiedTip.style.display = 'block';
       setTimeout(function(){copiedTip.style.display='none';},1200);
     });
