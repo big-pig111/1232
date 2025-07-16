@@ -223,6 +223,144 @@
             transform: translate(-50%,-50%);
             z-index: 2;
         }
+        .beast-card {
+            perspective: 900px;
+            width: 100%;
+            min-height: 320px;
+            height: 340px;
+            position: relative;
+        }
+        .beast-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.7s cubic-bezier(.4,2,.6,1);
+            transform-style: preserve-3d;
+        }
+        .beast-card.flipped .beast-card-inner {
+            transform: rotateY(180deg);
+        }
+        .beast-card-front, .beast-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            background: #fff;
+            overflow: hidden;
+        }
+        .beast-card-front {
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+        }
+        .beast-card-back {
+            transform: rotateY(180deg);
+            background: #f7f6f3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 1.2rem 1rem 0.7rem 1rem;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        .beast-card-back .uploader-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 0.7rem;
+        }
+        .beast-card-back .uploader-info img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #eee;
+        }
+        .beast-card-back .uploader-info span {
+            font-size: 1rem;
+            color: #333;
+        }
+        .beast-card-back .commentList {
+            width: 100%;
+            max-width: 340px;
+            min-height: 80px;
+            /* max-height: 120px;  删除最大高度限制 */
+            flex: 1;
+            overflow-y: auto;
+            background: #faf9f7;
+            border-radius: 8px;
+            padding: 0.7rem 0.8rem 0.5rem 0.8rem;
+            margin-bottom: 0.7rem;
+        }
+        .beast-card-back .commentInputBox {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            width: 100%;
+            max-width: 340px;
+            margin-top: auto;
+            /* 保证输入区始终在底部 */
+        }
+        .beast-card-back .commentInput {
+            flex: 1;
+            resize: none;
+            height: 32px;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .beast-card-back .submitCommentBtn {
+            background: #8b7d6b;
+            color: #fff;
+            padding: 0.3rem 1.1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.98rem;
+            cursor: pointer;
+        }
+        .beast-card-back .comment-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 0.6rem;
+        }
+        .beast-card-back .comment-card img {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .beast-card-back .comment-card .comment-content {
+            flex: 1;
+        }
+        .beast-card-back .comment-card .comment-user {
+            font-size: 0.97rem;
+            color: #333;
+            font-weight: 500;
+        }
+        .beast-card-back .comment-card .comment-text {
+            font-size: 0.96rem;
+            color: #444;
+            line-height: 1.5;
+        }
+        .beast-card-back .comment-card .comment-time {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        .beast-card-back .close-back-btn {
+            position: absolute;
+            top: 10px;
+            right: 16px;
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #888;
+            z-index: 2;
+        }
     </style>
     <script src="./wallet.js"></script>
 </head>
@@ -330,11 +468,33 @@
         </form>
       </div>
     </div>
+    <!-- 异兽详情与留言弹窗 -->
+    <div id="beastDetailModal" style="display:none;position:fixed;z-index:5000;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:2rem 2.5rem;border-radius:16px;max-width:95vw;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;display:flex;flex-direction:column;align-items:center;min-width:340px;">
+        <button id="closeBeastDetailModal" style="position:absolute;top:10px;right:16px;font-size:1.5rem;background:none;border:none;cursor:pointer;">×</button>
+        <img id="detailBeastImg" src="" alt="" style="width:220px;height:140px;object-fit:cover;border-radius:10px;margin-bottom:1rem;">
+        <h3 id="detailBeastName" style="margin-bottom:0.5rem;"></h3>
+        <p id="detailBeastDesc" style="margin-bottom:1rem;color:#666;"></p>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.2rem;">
+          <img id="uploaderAvatar" src="" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #eee;">
+          <span id="uploaderName" style="font-size:1.05rem;color:#333;"></span>
+        </div>
+        <div style="width:100%;max-width:420px;">
+          <h4 style="margin-bottom:0.5rem;">留言板</h4>
+          <div id="commentList" style="max-height:180px;overflow:auto;background:#faf9f7;border-radius:8px;padding:0.7rem 0.8rem 0.5rem 0.8rem;margin-bottom:0.7rem;"></div>
+          <div id="commentInputBox" style="display:flex;gap:0.5rem;align-items:center;">
+            <textarea id="commentInput" placeholder="说点什么..." maxlength="200" style="flex:1;resize:none;height:38px;padding:0.4rem 0.6rem;border-radius:6px;border:1px solid #ccc;"></textarea>
+            <button id="submitCommentBtn" style="background:#8b7d6b;color:#fff;padding:0.4rem 1.2rem;border:none;border-radius:8px;font-size:1rem;cursor:pointer;">留言</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script>
         // 山海经异兽数据（包含名称、描述和图片）
         const shanhaiData = [
@@ -427,13 +587,15 @@
                 return;
             }
             creatures.forEach(creature => {
-                const card = document.createElement('div');
-                card.className = 'gallery-item';
-                const beastId = creature.id || creature.name; // Firestore有id，内置用name
+                const beastId = creature.id || creature.name;
                 const liked = localStorage.getItem('liked_' + beastId);
+                const card = document.createElement('div');
+                card.className = 'gallery-item beast-card';
                 card.innerHTML = `
-                    <img src="${creature.image}" alt="${creature.name}" class="creature-img">
-                    <div class="creature-info">
+                  <div class="beast-card-inner">
+                    <div class="beast-card-front">
+                      <img src="${creature.image}" alt="${creature.name}" class="creature-img">
+                      <div class="creature-info">
                         <h3 class="creature-name">${creature.name}
                           <span class="like-btn" data-id="${beastId}" style="margin-left:10px;user-select:none;position:relative;">
                             <span class="heart" style="color:${liked ? '#e25555' : '#bbb'};cursor:pointer;font-size:1.2em;transition:all 0.2s;">♥</span>
@@ -442,8 +604,76 @@
                           </span>
                         </h3>
                         <p class="creature-desc">${creature.description}</p>
+                      </div>
                     </div>
+                    <div class="beast-card-back">
+                      <button class="close-back-btn" title="关闭">×</button>
+                      <div class="uploader-info">
+                        <img src="${creature.type === 'user' && creature.uploader ? (creature.uploader.photoURL || 'https://api.dicebear.com/7.x/identicon/svg?seed=' + (creature.uploader.uid || 'anon')) : 'https://api.dicebear.com/7.x/identicon/svg?seed=official'}" alt="">
+                        <span>${creature.type === 'user' && creature.uploader ? (creature.uploader.displayName || '用户') : '官方'}</span>
+                      </div>
+                      <div class="commentList" id="commentList_${beastId}"></div>
+                      <div class="commentInputBox">
+                        <textarea class="commentInput" id="commentInput_${beastId}" placeholder="说点什么..." maxlength="200"></textarea>
+                        <button class="submitCommentBtn" id="submitCommentBtn_${beastId}">留言</button>
+                      </div>
+                    </div>
+                  </div>
                 `;
+                // 卡片点击翻转
+                card.onclick = function(e) {
+                  // 避免点赞等子元素冒泡触发翻转
+                  if (e.target.closest('.like-btn')) return;
+                  if (e.target.classList.contains('close-back-btn')) return;
+                  if (!card.classList.contains('flipped')) {
+                    card.classList.add('flipped');
+                    loadCardComments(beastId, card);
+                  }
+                };
+                // 关闭按钮翻回正面
+                setTimeout(() => {
+                  const closeBtn = card.querySelector('.close-back-btn');
+                  if (closeBtn) {
+                    closeBtn.onclick = function(ev) {
+                      ev.stopPropagation();
+                      card.classList.remove('flipped');
+                    };
+                  }
+                  // 留言按钮事件绑定（只绑定一次）
+                  const commentInput = card.querySelector(`#commentInput_${beastId}`);
+                  const submitCommentBtn = card.querySelector(`#submitCommentBtn_${beastId}`);
+                  submitCommentBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    const user = auth.currentUser;
+                    if (!user) {
+                      alert('请先登录后留言！');
+                      return;
+                    }
+                    const content = commentInput.value.trim();
+                    if (!content) {
+                      alert('留言内容不能为空！');
+                      return;
+                    }
+                    submitCommentBtn.disabled = true;
+                    try {
+                      const commentData = {
+                        beastId: beastId,
+                        userId: user.uid,
+                        userName: user.displayName || (user.isAnonymous ? '匿名用户' : '用户'),
+                        userAvatar: user.photoURL || 'https://api.dicebear.com/7.x/identicon/svg?seed=' + (user.uid || 'anon'),
+                        content,
+                        created: Date.now()
+                      };
+                      // push到Realtime Database
+                      await rtdb.ref('beast_comments/' + beastId).push(commentData);
+                      commentInput.value = '';
+                      await loadCardComments(beastId, card); // 只刷新留言列表
+                    } catch (e) {
+                      alert('留言失败，请稍后重试');
+                    }
+                    submitCommentBtn.disabled = false;
+                  };
+                }, 0);
                 galleryContainer.appendChild(card);
             });
             document.getElementById('addCard').onclick = () => {
@@ -637,6 +867,50 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const storage = firebase.storage();
+        const rtdb = firebase.database(); // 新增Realtime Database实例
+
+        // 卡片留言板相关逻辑（改为Realtime Database）
+        async function loadCardComments(beastId, card) {
+          const commentListDiv = card.querySelector(`#commentList_${beastId}`);
+          commentListDiv.innerHTML = '<div style="color:#aaa;text-align:center;">加载中...</div>';
+          // 读取Realtime Database留言
+          rtdb.ref('beast_comments/' + beastId).orderByChild('created').limitToLast(50).once('value', snap => {
+            const val = snap.val();
+            if (!val) {
+              commentListDiv.innerHTML = '<div style="color:#aaa;text-align:center;">暂无留言</div>';
+              return;
+            }
+            // 按created倒序
+            const comments = Object.values(val).sort((a, b) => (b.created || 0) - (a.created || 0));
+            commentListDiv.innerHTML = '';
+            comments.forEach(data => {
+              const div = document.createElement('div');
+              div.className = 'comment-card';
+              div.innerHTML = `
+                <img src="${data.userAvatar}" alt="">
+                <div class="comment-content">
+                  <div class="comment-user">${data.userName || '用户'}</div>
+                  <div class="comment-text">${data.content}</div>
+                  <div class="comment-time">${data.created ? new Date(data.created).toLocaleString() : ''}</div>
+                </div>
+              `;
+              commentListDiv.appendChild(div);
+            });
+            // 留言输入区权限
+            const user = auth.currentUser;
+            const commentInput = card.querySelector(`#commentInput_${beastId}`);
+            const submitCommentBtn = card.querySelector(`#submitCommentBtn_${beastId}`);
+            if (!user) {
+              commentInput.disabled = true;
+              submitCommentBtn.disabled = true;
+              commentInput.placeholder = '请先登录后留言';
+            } else {
+              commentInput.disabled = false;
+              submitCommentBtn.disabled = false;
+              commentInput.placeholder = '说点什么...';
+            }
+          });
+        }
 
         // 上传弹窗逻辑
         const addCard = document.getElementById('addCard');
@@ -773,13 +1047,20 @@
           try {
             // 自动压缩图片
             const base64Url = await compressImage(file, 600, 600, 0.7); // 600px最大边，70%质量
+            // 保存上传者信息
             await db.collection('beasts').add({
               name,
               description: desc,
               image: base64Url,
               created: firebase.firestore.FieldValue.serverTimestamp(),
               likes: 0,
-              type: 'user'
+              type: 'user',
+              uploader: {
+                uid: user.uid,
+                displayName: user.displayName || (user.isAnonymous ? '匿名用户' : '用户'),
+                photoURL: user.photoURL || 'https://api.dicebear.com/7.x/identicon/svg?seed=' + (user.uid || 'anon'),
+                twitterUid: user.providerData && user.providerData[0] ? user.providerData[0].uid : ''
+              }
             });
             lastUploadTime = now; // 更新时间戳
             beastForm.reset();
