@@ -875,7 +875,7 @@
         closeTaskModal.onclick = () => {
           taskModal.style.display = 'none';
         };
-        const tweetContent = `《山海经》：上古奇书，载山川异兽、神话方国\n欢迎来到山海经社区\n社区网站：https://www.shanhaijing.work\n我们正在组设代币空投活动，快来参与吧！！\n用户上传异兽，点赞获得奇珍异宝！！\nBHHRmpyupaFt8bFcc9KrPG3bJACdDi52nHdGWm8fbonk预填内容`;
+        const tweetContent = `《山海经》：上古奇书，载山川异兽、神话方国\n欢迎来到山海经社区\n社区网站：https://www.shanhaijing.work\n我们正在组设代币空投活动，快来参与吧！！\n用户上传异兽，点赞获得奇珍异宝！！\nBHHRmpyupaFt8bFcc9KrPG3bJACdDi52nHdGWm8fbonk`;
         tweetBtn.onclick = async () => {
           const user = auth.currentUser;
           const tweetUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweetContent);
@@ -912,7 +912,7 @@
             alert('请填写你的推文链接！');
             return;
           }
-          const re = /^https?:\/\/twitter\.com\/[^\/]+\/status\/(\d+)$/;
+          const re = /^https?:\/\/(twitter\.com|x\.com)\/[^\/]+\/status\/(\d+)$/;
           if (!re.test(url)) {
             alert('请粘贴正确的推文链接！');
             return;
