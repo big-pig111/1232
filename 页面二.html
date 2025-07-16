@@ -361,6 +361,64 @@
             color: #888;
             z-index: 2;
         }
+        /* 合并index.html角色展示区样式 */
+        .container {
+          display: flex;
+          height: 320px;
+          width: 100%;
+          margin-bottom: 2rem;
+          gap: 1.5rem;
+        }
+        .panel {
+          flex: 1;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          position: relative;
+          transition: flex 0.5s, filter 0.5s;
+          filter: brightness(0.5) grayscale(20%);
+          cursor: pointer;
+          border-radius: 18px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+          min-width: 0;
+          display: flex;
+          align-items: flex-end;
+        }
+        .panel.active {
+          flex: 3;
+          filter: brightness(1) grayscale(0%);
+          z-index: 2;
+        }
+        .overlay {
+          position: absolute;
+          bottom: 20px;
+          left: 20px;
+          color: #fff;
+          font-size: 1.5rem;
+          opacity: 0;
+          transition: opacity 0.5s;
+          background: rgba(0,0,0,0.4);
+          padding: 10px 20px;
+          border-radius: 8px;
+        }
+        .panel.active .overlay {
+          opacity: 1;
+        }
+        @media (max-width: 900px) {
+          .container { height: 180px; }
+          .overlay { font-size: 1rem; }
+        }
+        /* 箭头按钮样式 */
+        #goHomeBtn:hover {
+          background: #f7f6f3;
+          box-shadow: 0 6px 24px rgba(139,125,107,0.22);
+        }
+        #goHomeBtn:hover svg path {
+          stroke: #e25555;
+        }
+        #goHomeBtn:active {
+          background: #f0ede7;
+        }
     </style>
     <script src="./wallet.js"></script>
 </head>
@@ -440,6 +498,31 @@
     <div class="loading">
         <div class="loading-spinner"></div>
         <p>正在召唤异兽...</p>
+    </div>
+
+    <!-- 角色展示区（合并自index.html） -->
+    <div class="container" style="margin: 2rem auto 0 auto; max-width: 1200px; display: flex; position: relative;">
+      <div class="panel active" style="background-image: url('./image1.png')">
+        <div class="overlay">麟狮幻兽</div>
+      </div>
+      <div class="panel" style="background-image: url('./image2.png')">
+        <div class="overlay">白体鼓音驹</div>
+      </div>
+      <div class="panel" style="background-image: url('./image3.png')">
+        <div class="overlay">九尾背眸羊</div>
+      </div>
+      <div class="panel" style="background-image: url('image4.png')">
+        <div class="overlay">三眸鹊音鸮</div>
+      </div>
+      <div class="panel" style="background-image: url('image5.png')">
+        <div class="overlay">四足飞翼虺</div>
+      </div>
+      <!-- 跳转首页按钮 -->
+      <button id="goHomeBtn" title="返回首页" style="position:absolute;right:-70px;top:50%;transform:translateY(-50%);width:56px;height:56px;background:#fff;border:none;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.10);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:box-shadow 0.2s,background 0.2s;outline:none;">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 8l8 8-8 8" stroke="#8b7d6b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
 
     <!-- 图片画廊 -->
@@ -819,39 +902,7 @@
         function isScrollAtBottom() {
           return window.innerHeight + window.scrollY >= document.body.scrollHeight - 2;
         }
-        // 鼠标滚轮向下切换到页面三（仅在最底部时）
-        document.addEventListener('wheel', function(e) {
-          if (e.deltaY > 0 && isScrollAtBottom()) {
-            smoothGoToPageThree();
-          }
-        });
-        // 触摸下滑切换到页面三（仅在最底部时）
-        let startY = 0;
-        document.addEventListener('touchstart', function(e) {
-          startY = e.touches[0].clientY;
-        }, { passive: true });
-        document.addEventListener('touchend', function(e) {
-          let endY = e.changedTouches[0].clientY;
-          if (startY - endY < -50 && isScrollAtBottom()) {
-            smoothGoToPageThree();
-          }
-        }, { passive: true });
-        // 鼠标滚轮向上返回首页（仅在最顶部时）
-        document.addEventListener('wheel', function(e) {
-            if (e.deltaY < 0 && window.scrollY === 0) {
-                smoothBackToHome();
-            }
-        });
-        // 触摸上滑返回首页（仅在最顶部时）
-        document.addEventListener('touchstart', function(e) {
-            startY = e.touches[0].clientY;
-        }, { passive: true });
-        document.addEventListener('touchend', function(e) {
-            let endY = e.changedTouches[0].clientY;
-            if (startY - endY > 50 && window.scrollY === 0) {
-                smoothBackToHome();
-            }
-        }, { passive: true });
+        // 已彻底禁止滚轮/触摸上滑进入任何页面
 
         // Firebase配置
         const firebaseConfig = {
@@ -1218,8 +1269,36 @@
             alert('提交失败，请稍后重试');
           }
         };
+        // 角色展示区面板切换逻辑
+        (function(){
+          const panels = document.querySelectorAll('.container .panel');
+          let current = 0;
+          let timer = null;
+          function activatePanel(idx) {
+            panels.forEach((p, i) => p.classList.toggle('active', i === idx));
+            current = idx;
+          }
+          panels.forEach((panel, idx) => {
+            panel.addEventListener('click', () => {
+              activatePanel(idx);
+            });
+          });
+          function startAutoSwitch() {
+            if(timer) clearInterval(timer);
+            timer = setInterval(() => {
+              let next = (current + 1) % panels.length;
+              activatePanel(next);
+            }, 5000);
+          }
+          startAutoSwitch();
+        })();
         // 修正主内容区顶部padding，避免被navbar遮挡
         document.body.style.paddingTop = '60px';
+        // 跳转首页按钮逻辑
+        const goHomeBtn = document.getElementById('goHomeBtn');
+        if(goHomeBtn){
+          goHomeBtn.onclick = () => { window.location.href = 'index.html'; };
+        }
     </script>
 </body>
 </html>
