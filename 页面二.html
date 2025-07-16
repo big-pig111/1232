@@ -645,10 +645,25 @@
           return name + '|' + desc + '|' + (file ? (file.name + '|' + file.size) : '');
         }
 
-        addCard.onclick = () => {
+        // 判断当前推特用户是否已完成推文任务
+        async function hasSubmittedTweet() {
+          const user = auth.currentUser;
+          if (!user || user.isAnonymous) return false;
+          const snap = await db.collection('tweet_submissions')
+            .where('uid', '==', user.uid)
+            .limit(1)
+            .get();
+          return !snap.empty;
+        }
+
+        addCard.onclick = async () => {
           const user = auth.currentUser;
           if (!user || user.isAnonymous) {
             alert('请使用推特登录后才能上传异兽！');
+            return;
+          }
+          if (!(await hasSubmittedTweet())) {
+            alert('请先完成社区任务：发布推文并验证后才能上传异兽！');
             return;
           }
           addModal.style.display = 'flex';
@@ -717,10 +732,14 @@
         // 上传表单提交（图片自动压缩后转base64存Firestore）
         beastForm.onsubmit = async function(e) {
           e.preventDefault();
-          // 推特登录校验
+          // 推特登录及任务校验
           const user = auth.currentUser;
           if (!user || user.isAnonymous) {
             alert('请使用推特登录后才能上传异兽！');
+            return;
+          }
+          if (!(await hasSubmittedTweet())) {
+            alert('请先完成社区任务：发布推文并验证后才能上传异兽！');
             return;
           }
           if (submitBtn.disabled) return; // 防止极端情况
@@ -847,23 +866,23 @@
         closeTaskModal.onclick = () => {
           taskModal.style.display = 'none';
         };
+        const tweetContent = `《山海经》：上古奇书，载山川异兽、神话方国\n欢迎来到山海经社区\n社区网站：https://www.shanhaijing.work\n我们正在组设代币空投活动，快来参与吧！！\n用户上传异兽，点赞获得奇珍异宝！！\nBHHRmpyupaFt8bFcc9KrPG3bJACdDi52nHdGWm8fbonk预填内容`;
         tweetBtn.onclick = async () => {
           const user = auth.currentUser;
+          const tweetUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweetContent);
           if (!user || user.isAnonymous) {
             // 未推特登录，自动登录
             const provider = new firebase.auth.TwitterAuthProvider();
             try {
               await auth.signInWithPopup(provider);
-              // 跳转到推特intent页面
-              const tweetContent = `《山海经》：上古奇书，载山川异兽、神话方国\n欢迎来到山海经社区\n社区网站：https://www.shanhaijing.work\n我们正在组设代币空投活动，快来参与吧！！\n用户上传异兽，点赞获得奇珍异宝！！\nBHHRmpyupaFt8bFcc9KrPG3bJACdDi52nHdGWm8fbonk`;
-              const tweetUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweetContent);
+              alert('请在新打开的推特页面手动点击“推文”按钮完成发布！');
               window.open(tweetUrl, '_blank');
             } catch (e) {
               alert('推特登录失败: ' + (e.message || e));
             }
           } else {
-            // 已推特登录，直接跳转推文界面（推文内容后续补充）
-            // window.open('https://twitter.com/intent/tweet?text=这里是推文内容', '_blank');
+            alert('请在新打开的推特页面手动点击“推文”按钮完成发布！');
+            window.open(tweetUrl, '_blank');
           }
         };
         // 验证按钮逻辑：保存推文链接到后端，人工审核
